@@ -1,21 +1,26 @@
 /**
- * 拾光 · 校园失物招领 —— 后端服务（零依赖版）
+ * 拾光 · 校园失物招领 —— 后端服务（Supabase 版）
  * ============================================================
- * 纯 Node 内置模块实现，无需 MongoDB / npm install。
- *   启动：node server.js   （或双击 start-server.bat）
- *   端口：process.env.PORT || 3000
+ * 账号系统：Supabase Auth（手机号 + 密码，内部映射为 <手机号>@phone.shiguang.local，
+ *           通过 admin API 创建用户并直接标记已确认 —— 无需短信 / 邮箱验证）
+ * 数据库：  Supabase Postgres（profiles / posts / comments / notifications / claims，
+ *           经 PostgREST 访问，服务端密钥绕过 RLS）
+ * 图片：    Supabase Storage（public bucket "uploads"）
+ *
+ * 启动：node server.js   （需环境变量 SUPABASE_URL / SUPABASE_SECRET_KEY）
+ * 端口：process.env.PORT || 3000
  *
  * 双角色体系：
  *   - admin 管理员：用户管理（封禁/解封/授权）、删任意帖子评论、平台统计、处理认领
  *   - user  普通用户：发帖/编辑自己的帖子、评论、点赞、发起认领
  *
- * 鉴权：双 token（对齐前端 request.js 的约定）
- *   - accessToken  2 小时，请求头 Authorization: Bearer <token>
- *   - refreshToken 7 天，过期后前端拿它调 POST /api/auth/refresh 静默续期
+ * 鉴权：直接透传 Supabase 的 accessToken / refreshToken，
+ *   - accessToken  1 小时，请求头 Authorization: Bearer <token>
+ *   - refreshToken 过期后前端拿它调 POST /api/auth/refresh 静默续期
  *   - 过期返回 code=40102（触发前端刷新重放），无效返回 40101（触发跳登录）
  *
  * 响应信封：{ code, message, data, meta? }，成功 code 恒为 0
- * 存储：data/db.json（首次启动自动写入种子数据与演示账号）
+ * 首次启动自动播种演示数据（4 个手机号演示账号 + 10 条帖子 + 评论/认领/通知）
  */
 
 import http from 'node:http';
@@ -26,70 +31,174 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
-const JWT_SECRET = process.env.JWT_SECRET || 'shiguang-lost-found-dev-secret';
-const ACCESS_TTL = 2 * 60 * 60;        // 2h
-const REFRESH_TTL = 7 * 24 * 60 * 60;  // 7d
-const DB_FILE = path.join(__dirname, 'data', 'db.json');
+
+/* ============================================================
+ * Supabase 接入配置
+ * ============================================================ */
+
+const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+const SB_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE || '';
+
+if (!SB_URL || !SB_KEY) {
+  console.error('[fatal] 缺少环境变量 SUPABASE_URL / SUPABASE_SECRET_KEY，无法启动。');
+  console.error('        本地开发可在项目根目录创建 .env 或在启动命令前设置这两个变量。');
+  process.exit(1);
+}
+
+/** Supabase REST/Auth/Storage 统一请求封装 */
+async function sbFetch(url, { method = 'GET', body, headers = {}, raw = false } = {}) {
+  const resp = await fetch(url, {
+    method,
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+    body: body === undefined ? undefined : (raw ? body : JSON.stringify(body)),
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    let msg = text;
+    try { msg = JSON.parse(text).message || text; } catch {}
+    const err = new Error(msg || `Supabase ${resp.status}`);
+    err.status = resp.status;
+    err.body = text;
+    throw err;
+  }
+  return resp;
+}
+
+/** PostgREST 表查询：sbTable('posts', '?select=*&limit=10') */
+function tableUrl(table, query = '') {
+  return `${SB_URL}/rest/v1/${table}${query.startsWith('?') ? query : `?${query}`}`;
+}
+async function sbSelect(table, query) {
+  const r = await sbFetch(tableUrl(table, query));
+  return r.json();
+}
+async function sbInsert(table, rows) {
+  const r = await sbFetch(tableUrl(table, '?select=*'), {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: Array.isArray(rows) ? rows : [rows],
+  });
+  return r.json();
+}
+/** PostgREST 过滤值自动补操作符：{ id: 'p_1' } -> id=eq.p_1；已带操作符的原样保留 */
+function withOps(match) {
+  return Object.fromEntries(Object.entries(match).map(([k, v]) =>
+    [/^(eq|neq|gt|gte|lt|lte|like|ilike|is|in|contains|contained|or)\./.test(String(v)) ? v : `eq.${v}`].map((nv) => [k, nv])[0]
+  ));
+}
+async function sbUpdate(table, match, patch) {
+  const qs = new URLSearchParams(withOps(match)).toString();
+  const r = await sbFetch(tableUrl(table, `?${qs}&select=*`), {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: patch,
+  });
+  return r.json();
+}
+async function sbDelete(table, match) {
+  const qs = new URLSearchParams(withOps(match)).toString();
+  await sbFetch(tableUrl(table, `?${qs}`), { method: 'DELETE' });
+}
+/** 精确计数（Prefer: count=exact + limit=0，读 content-range 的总数段） */
+async function sbCount(table, match = {}) {
+  const qs = new URLSearchParams(withOps(match)).toString();
+  const r = await sbFetch(tableUrl(table, `?${qs}&limit=0`), {
+    headers: { Prefer: 'count=exact' },
+  });
+  const range = r.headers.get('content-range') || '*/0';
+  return Number(range.split('/')[1]) || 0;
+}
+
+/* ---------- GoTrue（Supabase Auth） ---------- */
+
+const phoneEmail = (phone) => `${phone}@phone.shiguang.local`;
+
+/** admin 创建用户并直接标记已确认（免邮箱/短信验证） */
+async function authCreateUser(phone, password, nickname, studentId, role) {
+  const r = await sbFetch(`${SB_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    body: {
+      email: phoneEmail(phone),
+      password,
+      email_confirm: true,
+      user_metadata: { phone, nickname, studentId: studentId || '', role: role || 'user' },
+    },
+  });
+  return r.json(); // { id, email, ... }
+}
+async function authDeleteUser(id) {
+  await sbFetch(`${SB_URL}/auth/v1/admin/users/${id}`, { method: 'DELETE' }).catch(() => {});
+}
+/** 密码登录，返回 { session } 或 null（凭据错误） */
+async function authLogin(phone, password) {
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: phoneEmail(phone), password }),
+  });
+  if (!r.ok) return null;
+  return r.json(); // { access_token, refresh_token, user, ... }
+}
+/** 刷新令牌，返回新 session 或 null */
+async function authRefresh(refreshToken) {
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!r.ok) return null;
+  return r.json();
+}
+/** 校验 accessToken，返回 auth 用户 { id } 或 { expired } */
+async function authVerify(token) {
+  const r = await fetch(`${SB_URL}/auth/v1/user`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` },
+  }).catch(() => null);
+  if (!r || !r.ok) {
+    const text = r ? await r.text().catch(() => '') : '';
+    return /expired/i.test(text) ? { expired: true } : null;
+  }
+  return r.json();
+}
 
 /* ============================================================
  * 工具函数
  * ============================================================ */
 
-const b64url = (buf) => Buffer.from(buf).toString('base64url');
-const uid = (prefix) => `${prefix}_${crypto.randomBytes(8).toString('hex')}`;
+const uid = (prefix) => `${prefix}_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
 const nowISO = () => new Date().toISOString();
 
-/** HMAC-SHA256 签名 JWT（HS256，base64url 三段式） */
-function signToken(payload, ttlSec) {
-  const iat = Math.floor(Date.now() / 1000);
-  const body = { ...payload, iat, exp: iat + ttlSec };
-  const head = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const data = b64url(JSON.stringify(body));
-  const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${head}.${data}`).digest('base64url');
-  return `${head}.${data}.${sig}`;
-}
+/* ============================================================
+ * 行 <-> 业务对象 映射（数据库 snake_case -> 前端驼峰契约）
+ * ============================================================ */
 
-/**
- * 校验 token。
- * 返回 { ok: true, payload } 或 { ok: false, reason: 'expired' | 'invalid' }
- */
-function verifyToken(token) {
-  if (!token || typeof token !== 'string') return { ok: false, reason: 'invalid' };
-  const parts = token.split('.');
-  if (parts.length !== 3) return { ok: false, reason: 'invalid' };
-  const [head, data, sig] = parts;
-  const expect = crypto.createHmac('sha256', JWT_SECRET).update(`${head}.${data}`).digest('base64url');
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expect);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, reason: 'invalid' };
-  let payload;
-  try {
-    payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
-  } catch {
-    return { ok: false, reason: 'invalid' };
-  }
-  if (typeof payload.exp !== 'number' || payload.exp * 1000 < Date.now()) return { ok: false, reason: 'expired' };
-  return { ok: true, payload };
-}
-
-/** scrypt 加盐哈希存密码（不存明文） */
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
-  return { salt, hash };
-}
-function verifyPassword(password, stored) {
-  if (!stored?.salt || !stored?.hash) return false;
-  const hash = crypto.scryptSync(String(password), stored.salt, 64).toString('hex');
-  const a = Buffer.from(hash);
-  const b = Buffer.from(stored.hash);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
+const rowToUser = (p) => ({
+  id: p.id, username: p.phone, phone: p.phone, nickname: p.nickname,
+  role: p.role, status: p.status, studentId: p.student_id || '', createdAt: p.created_at,
+});
 const PUBLIC_USER = (u) => ({
-  id: u.id, username: u.username, nickname: u.nickname,
+  id: u.id, username: u.username, phone: u.phone, nickname: u.nickname,
   role: u.role, status: u.status, studentId: u.studentId || '', createdAt: u.createdAt,
 });
+const rowToPost = (r) => ({
+  id: r.id, type: r.type, title: r.title, description: r.description,
+  category: r.category, location: r.location, locationDetail: r.location_detail,
+  eventTime: r.event_time, contact: r.contact, images: r.images || [], tags: r.tags || [],
+  status: r.status, authorId: r.author_id, authorName: r.author_name,
+  likedBy: r.liked_by || [], viewCount: r.view_count || 0,
+  createdAt: r.created_at, updatedAt: r.updated_at, resolvedAt: r.resolved_at,
+});
+
+/** 按 id 查用户资料；joinBanned 判断在调用处做 */
+async function getProfile(id) {
+  const rows = await sbSelect('profiles', new URLSearchParams({ id: `eq.${id}`, select: '*' }).toString());
+  return rows[0] ? rowToUser(rows[0]) : null;
+}
 
 /** 联系方式脱敏：未登录只能看到打码的手机号 / "登录后查看" */
 function maskContact(post, me){
@@ -104,100 +213,82 @@ function maskContact(post, me){
 }
 
 /* ============================================================
- * 数据存储（JSON 文件 + 原子写）
+ * 鉴权：请求 token -> Supabase 校验 -> profiles 资料装配
  * ============================================================ */
 
-let db = null;
+/** 收集请求中所有可能的 token 来源（兼容网关合并/改名/查询串降级） */
+function extractTokens(req) {
+  const list = [];
+  const push = (v) => {
+    v = String(v || '').trim().replace(/^Bearer\s+/i, '');
+    if (v && !list.includes(v)) list.push(v);
+  };
+  push(req.headers['authorization']);
+  for (const k of ['x-authorization', 'x-access-token', 'x-token']) push(req.headers[k]);
+  try {
+    const qs = new URL(req.url, 'http://localhost').searchParams;
+    push(qs.get('_t'));
+    push(qs.get('token'));
+  } catch {}
+  const auth = String(req.headers['authorization'] || '');
+  for (const m of auth.matchAll(/Bearer\s+([^\s,]+)/gi)) push(m[1]);
+  return list;
+}
 
-function loadDB() {
-  if (fs.existsSync(DB_FILE)) {
-    db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    return;
+/** token -> 用户 的短缓存（避免每个请求都打一次 Supabase） */
+const tokenCache = new Map(); // token -> { user, exp }
+const TOKEN_CACHE_TTL = 30 * 1000;
+
+async function getAuth(req) {
+  let expired = false;
+  for (const token of extractTokens(req)) {
+    if (token.length > 1000) continue;
+    const hit = tokenCache.get(token);
+    if (hit && hit.exp > Date.now()) return { user: hit.user };
+    const authUser = await authVerify(token);
+    if (!authUser) { expired = expired || false; continue; }
+    if (authUser.expired) { expired = true; continue; }
+    const profile = await getProfile(authUser.id);
+    if (!profile) continue;
+    if (tokenCache.size > 800) tokenCache.clear();
+    tokenCache.set(token, { user: profile, exp: Date.now() + TOKEN_CACHE_TTL });
+    return { user: profile };
   }
-  db = seedData();
-  saveDB();
-  console.log('[db] 未发现数据文件，已写入种子数据 ->', DB_FILE);
+  return { error: expired ? 'expired' : 'invalid' };
 }
 
-function saveDB() {
-  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-  const tmp = `${DB_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(db, null, 2), 'utf8');
-  fs.renameSync(tmp, DB_FILE); // 先写临时文件再改名，避免写一半损坏
+/** 需要登录的统一入口：校验 token + 封禁状态 */
+async function requireAuth(req, res) {
+  const auth = await getAuth(req);
+  if (auth.error === 'expired') {
+    fail(res, ...ERR.TOKEN_EXPIRED);
+    return null;
+  }
+  if (auth.error || !auth.user) {
+    fail(res, ...ERR.UNAUTHORIZED);
+    return null;
+  }
+  if (auth.user.status === 'banned') {
+    fail(res, ...ERR.BANNED);
+    return null;
+  }
+  return auth.user;
 }
 
-/** 种子数据：1 管理员 + 3 用户 + 贴合真实校园场景的帖子/评论/待处理认领 */
-function seedData() {
-  const t = nowISO();
-  const ago = (h) => new Date(Date.now() - h * 3600 * 1000).toISOString();
-  const users = [
-    { id: 'u_admin', username: 'admin', nickname: '拾光管理员', role: 'admin', status: 'active', studentId: '', createdAt: t, password: hashPassword('123456') },
-    { id: 'u_demo', username: 'demo', nickname: '王同学', role: 'user', status: 'active', studentId: '20230101', createdAt: t, password: hashPassword('123456') },
-    { id: 'u_li', username: 'li', nickname: '李同学', role: 'user', status: 'active', studentId: '20230218', createdAt: t, password: hashPassword('123456') },
-    { id: 'u_zhao', username: 'zhao', nickname: '赵同学', role: 'user', status: 'active', studentId: '', createdAt: t, password: hashPassword('123456') },
-  ];
-  const P = (o) => ({
-    images: [], tags: [], status: 'open', viewCount: 0, likedBy: [], resolvedAt: null,
-    locationDetail: '', eventTime: o.createdAt, updatedAt: o.createdAt, ...o,
-  });
-  const posts = [
-    P({ id: 'p_1', type: 'lost', title: '一串钥匙（挂蓝色小熊挂坠）', category: '钥匙',
-      description: '主校区体育馆更衣室附近丢失一串钥匙，带蓝色小熊挂坠和一个公交卡扣。有拾到请联系，请帮忙转发！',
-      location: '体育馆', contact: { method: 'phone', value: '13812340101' },
-      authorId: 'u_demo', authorName: '王同学', createdAt: ago(30), viewCount: 23, likedBy: ['u_li'] }),
-    P({ id: 'p_2', type: 'found', title: '捡到银色 iPhone 14（已交保卫处前先来登记）', category: '电子产品',
-      description: '第一食堂一楼靠窗座位捡到银色 iPhone 14，锁屏完好。先在这里登记，失主描述锁屏壁纸即可认领。',
-      location: '第一食堂', locationDetail: '一楼靠窗', contact: { method: 'wechat', value: 'li_wen_2023' },
-      authorId: 'u_li', authorName: '李同学', createdAt: ago(26), viewCount: 41, likedBy: ['u_demo', 'u_zhao'] }),
-    P({ id: 'p_3', type: 'lost', title: '黑色耐克外套（L 码）', category: '衣物',
-      description: '操场东看台看球时把外套落下了，黑色耐克 L 码，袖口有洗旧的白色logo。里面有校园卡一张。',
-      location: '操场', locationDetail: '东看台', contact: { method: 'phone', value: '15912340303' },
-      authorId: 'u_zhao', authorName: '赵同学', createdAt: ago(48), viewCount: 9 }),
-    P({ id: 'p_4', type: 'lost', title: 'AirPods Pro 充电盒丢失（耳机还在）', category: '电子产品',
-      description: '第三教学楼 305 教室下课后丢失 AirPods Pro 充电盒，两只耳机还在身上。盒子底部有贴纸。',
-      location: '第三教学楼', locationDetail: '305 教室', contact: { method: 'phone', value: '13612340505' },
-      authorId: 'u_demo', authorName: '王同学', createdAt: ago(70), viewCount: 12 }),
-    P({ id: 'p_5', type: 'found', title: '捡到校园卡（姓名：李 xx）', category: '卡类证件',
-      description: '校医院大门口捡到一张校园卡，姓氏看得到是李。已拍照登记，失主带学生证来核对领取。',
-      location: '校医院', locationDetail: '大门口', contact: { method: 'phone', value: '18812340606' },
-      authorId: 'u_demo', authorName: '王同学', createdAt: ago(20), viewCount: 15, likedBy: ['u_li'] }),
-    P({ id: 'p_6', type: 'found', title: '捡到电动车钥匙（带遥控器）', category: '钥匙',
-      description: '北门车棚地上捡的，雅迪的遥控钥匙。放在北门保安亭，失主去保安亭对特征领取。',
-      location: '北门', locationDetail: '非机动车棚', contact: { method: 'phone', value: '13712340707' },
-      authorId: 'u_li', authorName: '李同学', createdAt: ago(15), viewCount: 18 }),
-    P({ id: 'p_7', type: 'lost', title: '丢失校园卡（尾号 3210）', category: '卡类证件',
-      description: '图书馆二楼自习区丢的校园卡，尾号 3210。捡到的同学请联系我，有酬谢！',
-      location: '图书馆', locationDetail: '二楼自习区', contact: { method: 'wechat', value: 'wang_demo_88' },
-      authorId: 'u_demo', authorName: '王同学', createdAt: ago(56), viewCount: 30 }),
-    P({ id: 'p_8', type: 'lost', title: '丢失《高等数学（第七版）》，扉页写了名字', category: '书籍',
-      description: '第一教学楼三楼阅览室自习后书不见了，扉页有我的名字和班级。书不值钱但笔记很重要！',
-      location: '第一教学楼', locationDetail: '三楼阅览室', contact: { method: 'phone', value: '15012340808' },
-      authorId: 'u_zhao', authorName: '赵同学', createdAt: ago(80), viewCount: 11 }),
-    P({ id: 'p_9', type: 'found', title: '捡到《线性代数》+ 一本活页笔记', category: '书籍',
-      description: '第一教学楼 201 教室放学后收拾到一本线代和活页笔记，笔记主人应该很认真，快来认领。',
-      location: '第一教学楼', locationDetail: '201 教室', contact: { method: 'wechat', value: 'shiguang_li' },
-      authorId: 'u_li', authorName: '李同学', createdAt: ago(78), viewCount: 14, likedBy: ['u_demo'] }),
-    P({ id: 'p_10', type: 'lost', title: '丢失小米手环 8（已找到，谢谢各位）', category: '电子产品',
-      description: '周三落在操场器材室，已经找回。感谢帮忙转发和提供线索的同学！',
-      location: '操场', locationDetail: '器材室', contact: { method: 'phone', value: '13812340101' },
-      status: 'resolved', resolvedAt: ago(10),
-      authorId: 'u_demo', authorName: '王同学', createdAt: ago(120), viewCount: 35 }),
-  ];
-  const comments = [
-    { id: 'c_1', postId: 'p_2', authorId: 'u_zhao', authorName: '赵同学', content: '好人一生平安，我室友正找手机呢，我转告他', createdAt: ago(20) },
-    { id: 'c_2', postId: 'p_2', authorId: 'u_li', authorName: '李同学', content: '对，一楼服务台有个本子专门登记这个', createdAt: ago(18) },
-    { id: 'c_3', postId: 'p_1', authorId: 'u_li', authorName: '李同学', content: '昨天好像在更衣室门口见过一串钥匙，你去问问管理员？', createdAt: ago(24) },
-  ];
-  const notifications = [
-    { id: 'n_1', userId: 'u_demo', type: 'comment', content: '李同学 评论了你的帖子「一串钥匙（挂蓝色小熊挂坠）」', postId: 'p_1', read: false, createdAt: ago(24) },
-    { id: 'n_2', userId: 'u_li', type: 'like', content: '王同学 赞了你的帖子「捡到银色 iPhone 14（已交保卫处前先来登记）」', postId: 'p_2', read: false, createdAt: ago(20) },
-    { id: 'n_3', userId: 'u_li', type: 'claim', content: '王同学 申请认领你的帖子「捡到银色 iPhone 14（已交保卫处前先来登记）」，请核实处理', postId: 'p_2', read: false, createdAt: ago(12) },
-  ];
-  const claims = [
-    { id: 'cl_1', postId: 'p_2', claimantId: 'u_demo', claimantName: '王同学',
-      answer: '锁屏壁纸是一只橘猫，手机壳背面夹了一张公交卡', status: 'pending', createdAt: ago(12) },
-  ];
-  return { users, posts, comments, notifications, claims, counters: { post: 11, comment: 4 } };
+async function requireAdmin(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return null;
+  if (user.role !== 'admin') {
+    fail(res, ...ERR.FORBIDDEN);
+    return null;
+  }
+  return user;
+}
+
+async function notify(userId, type, content, postId = null) {
+  await sbInsert('notifications', {
+    id: uid('n'), user_id: userId, type, content, post_id: postId, read: false, created_at: nowISO(),
+  }).catch((e) => console.error('[notify]', e.message));
 }
 
 /* ============================================================
@@ -234,89 +325,15 @@ function readBody(req) {
     const chunks = [];
     req.on('data', (c) => {
       size += c.length;
-      if (size > 1024 * 1024) { req.destroy(); resolve(null); return; } // 上限 1MB
+      if (size > 8 * 1024 * 1024) { req.destroy(); resolve(null); return; } // 上限 8MB（图片 base64）
       chunks.push(c);
     });
     req.on('end', () => {
       if (!chunks.length) return resolve({});
       try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
-      catch { resolve(null); } // JSON 解析失败按坏请求处理
+      catch { resolve(null); }
     });
     req.on('error', () => resolve(null));
-  });
-}
-
-/** 收集请求中所有可能的 token 来源。
- *  兼容三类场景：
- *   1) 标准 Authorization: Bearer <token>（含网关把重复头合并成逗号串的情况）
- *   2) 反向代理改名的兜底头（x-authorization / x-access-token / x-token）
- *   3) 查询串 ?_t=<token>（网关剥离鉴权头时，前端会自动降级走查询串） */
-function extractTokens(req) {
-  const list = [];
-  const push = (v) => {
-    v = String(v || '').trim().replace(/^Bearer\s+/i, '');
-    if (v && !list.includes(v)) list.push(v);
-  };
-  push(req.headers['authorization']);
-  for (const k of ['x-authorization', 'x-access-token', 'x-token']) push(req.headers[k]);
-  try {
-    const qs = new URL(req.url, 'http://localhost').searchParams;
-    push(qs.get('_t'));
-    push(qs.get('token'));
-  } catch {}
-  // "Bearer a, Bearer b" 形式（重复头被网关合并）：逐个拆出来都作为候选
-  const auth = String(req.headers['authorization'] || '');
-  for (const m of auth.matchAll(/Bearer\s+([^\s,]+)/gi)) push(m[1]);
-  return list;
-}
-
-/** 从请求解析并校验 accessToken：任一来源合法即通过；全部失败时优先报「过期」而非「无效」，
- *  这样前端会走静默刷新重试，而不是直接把用户踢回登录页 */
-function getAuth(req) {
-  let expired = false;
-  for (const token of extractTokens(req)) {
-    const result = verifyToken(token);
-    if (!result.ok) {
-      if (result.reason === 'expired') expired = true;
-      continue;
-    }
-    const user = db.users.find((u) => u.id === result.payload.sub);
-    if (user) return { user };
-  }
-  return { error: expired ? 'expired' : 'invalid' };
-}
-
-/** 需要登录的统一入口：校验 token + 封禁状态 */
-function requireAuth(req, res) {
-  const auth = getAuth(req);
-  if (auth.error === 'expired') {
-    fail(res, ...ERR.TOKEN_EXPIRED);
-    return null;
-  }
-  if (auth.error || !auth.user) {
-    fail(res, ...ERR.UNAUTHORIZED);
-    return null;
-  }
-  if (auth.user.status === 'banned') {
-    fail(res, ...ERR.BANNED);
-    return null;
-  }
-  return auth.user;
-}
-
-function requireAdmin(req, res) {
-  const user = requireAuth(req, res);
-  if (!user) return null;
-  if (user.role !== 'admin') {
-    fail(res, ...ERR.FORBIDDEN);
-    return null;
-  }
-  return user;
-}
-
-function notify(userId, type, content, postId = null) {
-  db.notifications.unshift({
-    id: uid('n'), userId, type, content, postId, read: false, createdAt: nowISO(),
   });
 }
 
@@ -326,7 +343,6 @@ function notify(userId, type, content, postId = null) {
 
 const routes = [];
 function route(method, pattern, handler) {
-  // '/api/posts/:id' -> { keys: ['id'], regex: /^\/api\/posts\/([^/]+)$/ }
   const keys = [];
   const regex = new RegExp('^' + pattern.replace(/:[a-zA-Z]+/g, (m) => {
     keys.push(m.slice(1));
@@ -338,74 +354,79 @@ function route(method, pattern, handler) {
 /* ---------- 认证 ---------- */
 
 route('POST', '/api/auth/register', async (req, res, params, query, body) => {
-  const { username, password, nickname, studentId } = body || {};
-  // 对齐前端预览版规则：2-20 位中文/字母/数字/下划线
-  if (!username || !/^[\u4e00-\u9fa5a-zA-Z0-9_]{2,20}$/.test(username)) {
-    return fail(res, 400, 40001, '用户名需为 2-20 位中文、字母、数字或下划线');
+  const { phone, password, nickname, studentId } = body || {};
+  if (!phone || !/^1\d{10}$/.test(String(phone))) {
+    return fail(res, 400, 40001, '请输入 11 位手机号');
   }
-  // 8-20 位，需同时包含字母和数字
-  if (!password || !/^(?=.*[a-zA-Z])(?=.*\d)\S{8,20}$/.test(String(password))) {
-    return fail(res, 400, 40001, '密码需 8-20 位，且同时包含字母和数字');
+  // 6-20 位（演示环境放宽：纯数字密码 123456 也可用）
+  if (!password || !/^\S{6,20}$/.test(String(password))) {
+    return fail(res, 400, 40001, '密码需 6-20 位');
   }
   if (studentId && !/^\d{6,20}$/.test(String(studentId))) {
     return fail(res, 400, 40001, '学号为 6-20 位数字');
   }
-  if (db.users.some((u) => u.username === username)) {
-    return fail(res, 400, 40001, '用户名已被占用');
+  // 手机号唯一性：auth.users 里 pseudo email 唯一，直接尝试创建
+  let authUser;
+  try {
+    authUser = await authCreateUser(String(phone), String(password), String(nickname || `用户${phone.slice(-4)}`), studentId, 'user');
+  } catch (e) {
+    if (/already|registered|duplicate|unique/i.test(e.message + (e.body || ''))) {
+      return fail(res, 400, 40001, '该手机号已注册，请直接登录');
+    }
+    console.error('[register]', e.message);
+    return fail(res, 500, 50001, '注册失败，请稍后再试');
   }
-  // 注册一律是普通用户；管理员只能由已有管理员在后台授权
-  const user = {
-    id: uid('u'), username, nickname: nickname || username,
-    role: 'user', status: 'active', studentId: studentId || '',
-    createdAt: nowISO(), password: hashPassword(password),
-  };
-  db.users.push(user);
-  saveDB();
+  await sbInsert('profiles', {
+    id: authUser.id, phone: String(phone),
+    nickname: String(nickname || `用户${phone.slice(-4)}`),
+    role: 'user', status: 'active', student_id: String(studentId || ''), created_at: nowISO(),
+  });
+  // 注册完成直接登录，把 Supabase 会话令牌发给前端
+  const session = await authLogin(String(phone), String(password));
+  const profile = await getProfile(authUser.id);
   ok(res, {
-    user: PUBLIC_USER(user),
-    accessToken: signToken({ sub: user.id, role: user.role }, ACCESS_TTL),
-    refreshToken: signToken({ sub: user.id, typ: 'refresh' }, REFRESH_TTL),
+    user: PUBLIC_USER(profile),
+    accessToken: session?.access_token,
+    refreshToken: session?.refresh_token,
   });
 });
 
 route('POST', '/api/auth/login', async (req, res, params, query, body) => {
-  const { username, password } = body || {};
-  const user = db.users.find((u) => u.username === username);
-  if (!user || !verifyPassword(password, user.password)) {
-    return fail(res, 400, 40001, '用户名或密码错误');
-  }
-  if (user.status === 'banned') {
+  const phone = String(body?.phone || body?.username || '').trim();
+  const password = String(body?.password || '');
+  if (!phone || !password) return fail(res, 400, 40001, '请输入手机号和密码');
+  const session = await authLogin(phone, password);
+  if (!session) return fail(res, 400, 40001, '手机号或密码错误');
+  const profile = await getProfile(session.user.id);
+  if (!profile) return fail(res, 401, 40101, '账号数据异常，请联系管理员');
+  if (profile.status === 'banned') {
     return fail(res, 403, 40302, '账号已被封禁，请联系管理员');
   }
   ok(res, {
-    user: PUBLIC_USER(user),
-    accessToken: signToken({ sub: user.id, role: user.role }, ACCESS_TTL),
-    refreshToken: signToken({ sub: user.id, typ: 'refresh' }, REFRESH_TTL),
+    user: PUBLIC_USER(profile),
+    accessToken: session.access_token,
+    refreshToken: session.refresh_token,
   });
 });
 
 route('POST', '/api/auth/refresh', async (req, res, params, query, body) => {
-  const result = verifyToken(body?.refreshToken);
-  if (!result.ok) {
-    return fail(res, ...ERR.UNAUTHORIZED);
-  }
-  const user = db.users.find((u) => u.id === result.payload.sub);
-  if (!user || user.status === 'banned') {
-    return fail(res, ...ERR.UNAUTHORIZED);
-  }
+  const refreshToken = String(body?.refreshToken || '');
+  if (!refreshToken) return fail(res, ...ERR.UNAUTHORIZED);
+  const session = await authRefresh(refreshToken);
+  if (!session) return fail(res, ...ERR.UNAUTHORIZED);
   ok(res, {
-    accessToken: signToken({ sub: user.id, role: user.role }, ACCESS_TTL),
-    refreshToken: signToken({ sub: user.id, typ: 'refresh' }, REFRESH_TTL),
+    accessToken: session.access_token,
+    refreshToken: session.refresh_token,
   });
 });
 
-route('GET', '/api/auth/me', (req, res) => {
-  const user = requireAuth(req, res);
+route('GET', '/api/auth/me', async (req, res) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
   ok(res, { user: PUBLIC_USER(user) });
 });
 
-/* 诊断端点：查看反代之后服务器实际收到的鉴权凭据（定位鉴权头被剥离问题） */
+/* 诊断端点：查看反代之后服务器实际收到的鉴权凭据 */
 route('GET', '/api/debug-headers', (req, res) => {
   let queryToken = false;
   try {
@@ -428,52 +449,66 @@ route('GET', '/api/debug-headers', (req, res) => {
 /* ---------- 帖子 ---------- */
 
 /** 列表：公开可读；支持 type/status/category/keyword 筛选 + 分页 */
-route('GET', '/api/posts', (req, res, params, query) => {
+route('GET', '/api/posts', async (req, res, params, query) => {
   const page = Math.max(1, Number(query.get('page')) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(query.get('pageSize')) || 10));
   const keyword = (query.get('keyword') || '').trim();
-
-  let list = db.posts.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const type = query.get('type');
   const status = query.get('status');
   const category = query.get('category');
-  if (type === 'lost' || type === 'found') list = list.filter((p) => p.type === type);
-  if (status === 'open' || status === 'resolved') list = list.filter((p) => p.status === status);
-  if (category) list = list.filter((p) => p.category === category);
+
+  const qs = new URLSearchParams({ select: '*', order: 'created_at.desc' });
+  if (type === 'lost' || type === 'found') qs.set('type', `eq.${type}`);
+  if (status === 'open' || status === 'resolved') qs.set('status', `eq.${status}`);
+  if (category) qs.set('category', `eq.${category}`);
   if (keyword) {
-    list = list.filter((p) =>
-      [p.title, p.description, p.location].some((s) => (s || '').toLowerCase().includes(keyword.toLowerCase())));
+    const k = keyword.replace(/[,()]/g, ' ').trim();
+    qs.set('or', `(title.ilike.*${k}*,description.ilike.*${k}*,location.ilike.*${k}*)`);
   }
+  qs.set('limit', String(pageSize));
+  qs.set('offset', String((page - 1) * pageSize));
 
-  const total = list.length;
-  const items = list.slice((page - 1) * pageSize, page * pageSize);
+  const rows = await sbSelect('posts', `?${qs}`);
+  const total = rows.length === pageSize || page > 1
+    ? await sbCount('posts', Object.fromEntries([...qs.entries()].filter(([k]) => ['type','status','category','or'].includes(k))))
+    : rows.length;
 
-  // 若带了合法 token，附上 isLiked 方便前端渲染点赞态（没 token 不报错）
-  const auth = getAuth(req);
+  const auth = await getAuth(req);
   const me = auth.user || null;
+  // 批量取评论数
+  const ids = rows.map((r) => r.id);
+  let commentCounts = {};
+  if (ids.length) {
+    const cs = await sbSelect('comments', `?post_id=in.(${ids.join(',')})&select=post_id`);
+    for (const c of cs) commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1;
+  }
   ok(res, {
-    list: items.map((p) => ({
-      ...p, likedBy: undefined,
-      likeCount: p.likedBy.length,
-      commentCount: db.comments.filter((c) => c.postId === p.id).length,
-      isLiked: me ? p.likedBy.includes(me.id) : false,
-      isMine: me ? p.authorId === me.id : false,
-    })),
+    list: rows.map((r) => {
+      const p = rowToPost(r);
+      return {
+        ...p, likedBy: undefined,
+        likeCount: p.likedBy.length,
+        commentCount: commentCounts[p.id] || 0,
+        isLiked: me ? p.likedBy.includes(me.id) : false,
+        isMine: me ? p.authorId === me.id : false,
+      };
+    }),
   }, { page, pageSize, total });
 });
 
 /** 详情：公开可读，浏览量 +1 */
-route('GET', '/api/posts/:id', (req, res, params) => {
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
-  post.viewCount += 1;
-  saveDB();
-  const auth = getAuth(req);
+route('GET', '/api/posts/:id', async (req, res, params) => {
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  sbUpdate('posts', { id: params.id }, { view_count: (rows[0].view_count || 0) + 1 }).catch(() => {});
+  const auth = await getAuth(req);
   const me = auth.user || null;
+  const post = rowToPost(rows[0]);
+  const commentCount = await sbCount('comments', { post_id: `eq.${post.id}` });
   ok(res, {
     ...post, likedBy: undefined,
     likeCount: post.likedBy.length,
-    commentCount: db.comments.filter((c) => c.postId === post.id).length,
+    commentCount,
     contact: maskContact(post, me),
     isLiked: me ? post.likedBy.includes(me.id) : false,
     isMine: me ? post.authorId === me.id : false,
@@ -481,13 +516,15 @@ route('GET', '/api/posts/:id', (req, res, params) => {
 });
 
 /** 相似推荐：类型相反、状态未解决，分类/关键词/地点重合度打分取前 5 */
-route('GET', '/api/posts/:id/matches', (req, res, params) => {
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
+route('GET', '/api/posts/:id/matches', async (req, res, params) => {
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(rows[0]);
   const opposite = post.type === 'lost' ? 'found' : 'lost';
+  const candidates = (await sbSelect('posts', `?type=eq.${opposite}&status=eq.open&select=*`)).map(rowToPost);
   const words = (post.title + post.description).replace(/[（）()【】\s，。、：:？！?!,.]/g, ' ').split(' ').filter((w) => w.length >= 2);
-  const scored = db.posts
-    .filter((p) => p.id !== post.id && p.type === opposite && p.status === 'open')
+  const scored = candidates
+    .filter((p) => p.id !== post.id)
     .map((p) => {
       let score = 0;
       if (p.category === post.category) score += 3;
@@ -499,17 +536,21 @@ route('GET', '/api/posts/:id/matches', (req, res, params) => {
     .filter((x) => x.score >= 2)
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
+  const ids = scored.map((x) => x.post.id);
+  const cs = ids.length ? await sbSelect('comments', `?post_id=in.(${ids.join(',')})&select=post_id`) : [];
+  const commentCounts = {};
+  for (const c of cs) commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1;
   ok(res, scored.map((x) => ({
     ...x.post, likedBy: undefined,
     likeCount: x.post.likedBy.length,
-    commentCount: db.comments.filter((c) => c.postId === x.post.id).length,
+    commentCount: commentCounts[x.post.id] || 0,
     score: x.score,
   })));
 });
 
-/** 图片上传：dataURL(base64) 存为文件，返回访问地址（最多 3 张、单张 5MB 由前端限制） */
-route('POST', '/api/upload', (req, res, params, query, body) => {
-  const user = requireAuth(req, res);
+/** 图片上传：dataURL(base64) -> Supabase Storage public bucket "uploads" */
+route('POST', '/api/upload', async (req, res, params, query, body) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
   const dataURL = String(body?.image || '');
   const m = dataURL.match(/^data:image\/(png|jpe?g|webp);base64,(.+)$/);
@@ -518,13 +559,22 @@ route('POST', '/api/upload', (req, res, params, query, body) => {
   const buf = Buffer.from(m[2], 'base64');
   if (buf.length > 5 * 1024 * 1024) return fail(res, 400, 40001, '单张图片不能超过 5MB');
   const name = `up_${Date.now().toString(36)}_${crypto.randomBytes(5).toString('hex')}.${ext}`;
-  fs.mkdirSync(path.join(__dirname, 'data', 'uploads'), { recursive: true });
-  fs.writeFileSync(path.join(__dirname, 'data', 'uploads', name), buf);
-  ok(res, { url: `/uploads/${name}` });
+  try {
+    await sbFetch(`${SB_URL}/storage/v1/object/uploads/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': `image/${ext === 'jpg' ? 'jpeg' : ext}` },
+      body: buf,
+      raw: true,
+    });
+  } catch (e) {
+    console.error('[upload]', e.message);
+    return fail(res, 500, 50001, '图片上传失败，请稍后再试');
+  }
+  ok(res, { url: `${SB_URL}/storage/v1/object/public/uploads/${name}` });
 });
 
 route('POST', '/api/posts', async (req, res, params, query, body) => {
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
   const { type, title, description, category, location, locationDetail, eventTime, contact, images, tags } = body || {};
   if (type !== 'lost' && type !== 'found') return fail(res, 400, 40001, 'type 必须是 lost 或 found');
@@ -539,94 +589,103 @@ route('POST', '/api/posts', async (req, res, params, query, body) => {
   const imgs = Array.isArray(images) ? images.slice(0, 3) : [];
 
   const t = nowISO();
-  const post = {
-    id: `p_${db.counters.post++}`,
+  const row = {
+    id: uid('p'),
     type, title: String(title).trim(),
     description: String(description).trim(),
     category,
     location: location || '',
-    locationDetail: locationDetail || '',
-    eventTime: eventTime || t,
+    location_detail: locationDetail || '',
+    event_time: eventTime || t,
     contact: contact && contact.value ? { method: contact.method === 'wechat' ? 'wechat' : 'phone', value: String(contact.value) } : null,
     images: imgs,
     tags: Array.isArray(tags) ? tags.slice(0, 5).map(String) : [],
-    status: 'open', authorId: user.id, authorName: user.nickname,
-    createdAt: t, updatedAt: t, likedBy: [], viewCount: 0, resolvedAt: null,
+    status: 'open', author_id: user.id, author_name: user.nickname,
+    liked_by: [], view_count: 0,
+    created_at: t, updated_at: t, resolved_at: null,
   };
-  db.posts.unshift(post);
-  saveDB();
-  ok(res, post);
+  const saved = await sbInsert('posts', row);
+  ok(res, rowToPost(Array.isArray(saved) ? saved[0] : saved));
 });
 
 /** 编辑：作者本人或管理员 */
 route('PUT', '/api/posts/:id', async (req, res, params, query, body) => {
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(rows[0]);
   if (post.authorId !== user.id && user.role !== 'admin') return fail(res, ...ERR.FORBIDDEN);
 
-  const fields = ['title', 'description', 'category', 'location', 'locationDetail', 'eventTime', 'contact', 'type', 'status', 'tags', 'images'];
-  for (const f of fields) {
-    if (body && body[f] !== undefined) post[f] = body[f];
+  const patch = { updated_at: nowISO() };
+  const map = {
+    title: 'title', description: 'description', category: 'category',
+    location: 'location', locationDetail: 'location_detail', eventTime: 'event_time',
+    contact: 'contact', type: 'type', status: 'status', tags: 'tags', images: 'images',
+  };
+  for (const [from, to] of Object.entries(map)) {
+    if (body && body[from] !== undefined) patch[to] = body[from];
   }
-  if (body?.status === 'resolved') post.resolvedAt = nowISO();
-  post.updatedAt = nowISO();
-  saveDB();
-  ok(res, post);
+  if (patch.status === 'resolved') patch.resolved_at = nowISO();
+  const updated = await sbUpdate('posts', { id: params.id }, patch);
+  ok(res, rowToPost(Array.isArray(updated) ? updated[0] : updated));
 });
 
 /** 删除：作者本人或管理员；管理员删除会给作者发通知 */
-route('DELETE', '/api/posts/:id', (req, res, params) => {
-  const user = requireAuth(req, res);
+route('DELETE', '/api/posts/:id', async (req, res, params) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const idx = db.posts.findIndex((p) => p.id === params.id);
-  if (idx === -1) return fail(res, ...ERR.NOT_FOUND);
-  const post = db.posts[idx];
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(rows[0]);
   if (post.authorId !== user.id && user.role !== 'admin') return fail(res, ...ERR.FORBIDDEN);
 
-  db.posts.splice(idx, 1);
-  db.comments = db.comments.filter((c) => c.postId !== post.id);
-  db.claims = db.claims.filter((c) => c.postId !== post.id);
+  await sbDelete('posts', { id: post.id }); // comments/claims 由 FK 级联删除
+  await sbDelete('notifications', { post_id: `eq.${post.id}` }).catch(() => {});
   if (user.role === 'admin' && post.authorId !== user.id) {
-    notify(post.authorId, 'admin', `管理员删除了你的帖子「${post.title}」`);
+    await notify(post.authorId, 'admin', `管理员删除了你的帖子「${post.title}」`);
   }
-  saveDB();
   ok(res, { id: post.id });
 });
 
 /** 点赞/取消点赞（toggle） */
-route('POST', '/api/posts/:id/like', (req, res, params) => {
-  const user = requireAuth(req, res);
+route('POST', '/api/posts/:id/like', async (req, res, params) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(rows[0]);
   const i = post.likedBy.indexOf(user.id);
-  if (i >= 0) post.likedBy.splice(i, 1);
+  let isLiked;
+  if (i >= 0) { post.likedBy.splice(i, 1); isLiked = false; }
   else {
-    post.likedBy.push(user.id);
+    post.likedBy.push(user.id); isLiked = true;
     if (post.authorId !== user.id) {
-      notify(post.authorId, 'like', `${user.nickname} 赞了你的帖子「${post.title}」`, post.id);
+      await notify(post.authorId, 'like', `${user.nickname} 赞了你的帖子「${post.title}」`, post.id);
     }
   }
-  saveDB();
-  ok(res, { isLiked: i < 0, likeCount: post.likedBy.length });
+  await sbUpdate('posts', { id: post.id }, { liked_by: post.likedBy });
+  ok(res, { isLiked, likeCount: post.likedBy.length });
 });
 
 /* ---------- 评论 ---------- */
 
-route('GET', '/api/posts/:id/comments', (req, res, params) => {
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
-  ok(res, db.comments.filter((c) => c.postId === post.id)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
+route('GET', '/api/posts/:id/comments', async (req, res, params) => {
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: 'id' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const list = await sbSelect('comments', `?post_id=eq.${params.id}&select=*&order=created_at.asc`);
+  ok(res, list.map((c) => ({
+    id: c.id, postId: c.post_id, authorId: c.author_id, authorName: c.author_name,
+    content: c.content, replyTo: c.reply_to || null, createdAt: c.created_at,
+  })));
 });
 
 route('POST', '/api/posts/:id/comments', async (req, res, params, query, body) => {
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(rows[0]);
   const content = String(body?.content || '').trim();
   if (!content) return fail(res, 400, 40001, '请输入评论内容');
   if (content.length > 500) return fail(res, 400, 40001, '评论不能超过 500 字');
@@ -634,36 +693,37 @@ route('POST', '/api/posts/:id/comments', async (req, res, params, query, body) =
   // 回复：可携带被回复的评论 id 与作者名，前端展示「回复 @某人」
   let replyTo = null;
   if (body?.replyTo) {
-    const target = db.comments.find((c) => c.id === body.replyTo.id && c.postId === post.id);
-    if (target) replyTo = { id: target.id, name: target.authorName };
+    const targets = await sbSelect('comments', new URLSearchParams({ id: `eq.${body.replyTo.id}`, post_id: `eq.${post.id}`, select: '*' }).toString());
+    if (targets[0]) replyTo = { id: targets[0].id, name: targets[0].author_name };
   }
-  const comment = {
-    id: `c_${db.counters.comment++}`, postId: post.id,
-    authorId: user.id, authorName: user.nickname,
-    content, replyTo, createdAt: nowISO(),
+  const row = {
+    id: uid('c'), post_id: post.id,
+    author_id: user.id, author_name: user.nickname,
+    content, reply_to: replyTo, created_at: nowISO(),
   };
-  db.comments.push(comment);
+  const saved = await sbInsert('comments', row);
+  const comment = {
+    id: row.id, postId: row.post_id, authorId: row.author_id, authorName: row.author_name,
+    content: row.content, replyTo, createdAt: row.created_at,
+  };
   if (post.authorId !== user.id) {
-    notify(post.authorId, 'comment', `${user.nickname} 评论了你的帖子「${post.title}」`, post.id);
+    await notify(post.authorId, 'comment', `${user.nickname} 评论了你的帖子「${post.title}」`, post.id);
   } else if (replyTo && replyTo.name !== user.nickname) {
-    // 楼层被回复：通知被回复人（此处简化：通知帖子作者以外的被回复者需要查其用户）
-    const target = db.comments.find((c) => c.id === replyTo.id);
-    if (target && target.authorId !== user.id) {
-      notify(target.authorId, 'reply', `${user.nickname} 回复了你的评论`, post.id);
+    const target = await sbSelect('comments', new URLSearchParams({ id: `eq.${replyTo.id}`, select: 'author_id' }).toString());
+    if (target[0] && target[0].author_id !== user.id) {
+      await notify(target[0].author_id, 'reply', `${user.nickname} 回复了你的评论`, post.id);
     }
   }
-  saveDB();
   ok(res, comment);
 });
 
-route('DELETE', '/api/comments/:id', (req, res, params) => {
-  const user = requireAuth(req, res);
+route('DELETE', '/api/comments/:id', async (req, res, params) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const idx = db.comments.findIndex((c) => c.id === params.id);
-  if (idx === -1) return fail(res, ...ERR.NOT_FOUND);
-  if (db.comments[idx].authorId !== user.id && user.role !== 'admin') return fail(res, ...ERR.FORBIDDEN);
-  db.comments.splice(idx, 1);
-  saveDB();
+  const rows = await sbSelect('comments', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  if (rows[0].author_id !== user.id && user.role !== 'admin') return fail(res, ...ERR.FORBIDDEN);
+  await sbDelete('comments', { id: params.id });
   ok(res, { id: params.id });
 });
 
@@ -671,51 +731,63 @@ route('DELETE', '/api/comments/:id', (req, res, params) => {
 
 /** 发起认领：不能认领自己的帖子，一个帖子一人只能有一笔待处理认领 */
 route('POST', '/api/posts/:id/claims', async (req, res, params, query, body) => {
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const post = db.posts.find((p) => p.id === params.id);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
+  const rows = await sbSelect('posts', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(rows[0]);
   if (post.status !== 'open') return fail(res, 400, 40001, '该帖子已完成认领');
   if (post.authorId === user.id) return fail(res, 400, 40001, '不能认领自己发布的帖子');
   const answer = String(body?.answer || '').trim();
   if (!answer) return fail(res, 400, 40001, '请填写物品特征以便核实');
 
-  if (db.claims.some((c) => c.postId === post.id && c.claimantId === user.id && c.status === 'pending')) {
-    return fail(res, 400, 40001, '你已提交过认领申请，等待对方处理');
-  }
-  const claim = {
-    id: uid('cl'), postId: post.id, claimantId: user.id, claimantName: user.nickname,
-    answer, status: 'pending', createdAt: nowISO(),
+  const dup = await sbSelect('claims', `?post_id=eq.${post.id}&claimant_id=eq.${user.id}&status=eq.pending&select=id`);
+  if (dup.length) return fail(res, 400, 40001, '你已提交过认领申请，等待对方处理');
+
+  const row = {
+    id: uid('cl'), post_id: post.id, claimant_id: user.id, claimant_name: user.nickname,
+    answer, status: 'pending', created_at: nowISO(),
   };
-  db.claims.push(claim);
-  notify(post.authorId, 'claim', `${user.nickname} 申请认领你的帖子「${post.title}」，请核实处理`, post.id);
-  saveDB();
-  ok(res, claim);
+  await sbInsert('claims', row);
+  await notify(post.authorId, 'claim', `${user.nickname} 申请认领你的帖子「${post.title}」，请核实处理`, post.id);
+  ok(res, {
+    id: row.id, postId: row.post_id, claimantId: row.claimant_id, claimantName: row.claimant_name,
+    answer, status: 'pending', createdAt: row.created_at,
+  });
 });
 
 /** 我相关认领：received = 我作为发布者收到的；sent = 我发起的 */
-route('GET', '/api/claims/mine', (req, res) => {
-  const user = requireAuth(req, res);
+route('GET', '/api/claims/mine', async (req, res) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const myPosts = new Set(db.posts.filter((p) => p.authorId === user.id).map((p) => p.id));
+  const myPosts = await sbSelect('posts', `?author_id=eq.${user.id}&select=id,title,type`);
+  const myPostIds = myPosts.map((p) => p.id);
+  const all = await sbSelect('claims', '?select=*&order=created_at.desc');
+  const postMap = new Map(myPosts.map((p) => [p.id, p]));
+  const withPost = (c) => {
+    const p = postMap.get(c.post_id);
+    return {
+      id: c.id, postId: c.post_id, claimantId: c.claimant_id, claimantName: c.claimant_name,
+      answer: c.answer, status: c.status, createdAt: c.created_at, resolvedAt: c.resolved_at,
+      postTitle: p?.title || '(已删除)', postType: p?.type,
+    };
+  };
   ok(res, {
-    received: db.claims.filter((c) => myPosts.has(c.postId)).map(withPost),
-    sent: db.claims.filter((c) => c.claimantId === user.id).map(withPost),
+    received: all.filter((c) => myPostIds.includes(c.post_id)).map(withPost),
+    sent: all.filter((c) => c.claimant_id === user.id).map(withPost),
   });
 });
-function withPost(c) {
-  const post = db.posts.find((p) => p.id === c.postId);
-  return { ...c, postTitle: post?.title || '(已删除)', postType: post?.type };
-}
 
 /** 处理认领：approve / reject，仅发布者或管理员 */
 route('POST', '/api/claims/:id/resolve', async (req, res, params, query, body) => {
-  const user = requireAuth(req, res);
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const claim = db.claims.find((c) => c.id === params.id);
-  if (!claim) return fail(res, ...ERR.NOT_FOUND);
-  const post = db.posts.find((p) => p.id === claim.postId);
-  if (!post) return fail(res, ...ERR.NOT_FOUND);
+  const rows = await sbSelect('claims', new URLSearchParams({ id: `eq.${params.id}`, select: '*' }).toString());
+  if (!rows[0]) return fail(res, ...ERR.NOT_FOUND);
+  const claim = rows[0];
+  const posts0 = await sbSelect('posts', new URLSearchParams({ id: `eq.${claim.post_id}`, select: '*' }).toString());
+  if (!posts0[0]) return fail(res, ...ERR.NOT_FOUND);
+  const post = rowToPost(posts0[0]);
   if (post.authorId !== user.id && user.role !== 'admin') return fail(res, ...ERR.FORBIDDEN);
   if (claim.status !== 'pending') return fail(res, 400, 40001, '该认领已处理过');
 
@@ -723,130 +795,252 @@ route('POST', '/api/claims/:id/resolve', async (req, res, params, query, body) =
   if (action !== 'approve' && action !== 'reject') {
     return fail(res, 400, 40001, 'action 必须是 approve 或 reject');
   }
-  claim.status = action === 'approve' ? 'approved' : 'rejected';
-  claim.resolvedAt = nowISO();
+  const status = action === 'approve' ? 'approved' : 'rejected';
+  await sbUpdate('claims', { id: claim.id }, { status, resolved_at: nowISO() });
   if (action === 'approve') {
-    post.status = 'resolved';
-    post.resolvedAt = nowISO();
+    await sbUpdate('posts', { id: post.id }, { status: 'resolved', resolved_at: nowISO() });
     // 同帖其他待处理申请自动关闭
-    for (const c of db.claims) {
-      if (c.postId === post.id && c.id !== claim.id && c.status === 'pending') {
-        c.status = 'closed';
-      }
-    }
-    notify(claim.claimantId, 'claim', `你的认领申请已通过：「${post.title}」，请联系发布者领取`, post.id);
+    await sbUpdate('claims', { post_id: `eq.${post.id}`, status: 'eq.pending' }, { status: 'closed' });
+    await notify(claim.claimant_id, 'claim', `你的认领申请已通过：「${post.title}」，请联系发布者领取`, post.id);
   } else {
-    notify(claim.claimantId, 'claim', `你的认领申请未通过：「${post.title}」`, post.id);
+    await notify(claim.claimant_id, 'claim', `你的认领申请未通过：「${post.title}」`, post.id);
   }
-  saveDB();
-  ok(res, claim);
+  ok(res, {
+    id: claim.id, postId: claim.post_id, claimantId: claim.claimant_id, claimantName: claim.claimant_name,
+    answer: claim.answer, status, createdAt: claim.created_at, resolvedAt: nowISO(),
+  });
 });
 
 /* ---------- 通知 ---------- */
 
-route('GET', '/api/notifications', (req, res) => {
-  const user = requireAuth(req, res);
+route('GET', '/api/notifications', async (req, res) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
-  const list = db.notifications.filter((n) => n.userId === user.id);
-  ok(res, list.slice(0, 50), { unread: list.filter((n) => !n.read).length });
+  const list = await sbSelect('notifications', `?user_id=eq.${user.id}&select=*&order=created_at.desc&limit=50`);
+  const all = await sbCount('notifications', { user_id: `eq.${user.id}`, read: 'eq.false' });
+  ok(res, list.map((n) => ({
+    id: n.id, userId: n.user_id, type: n.type, content: n.content,
+    postId: n.post_id, read: n.read, createdAt: n.created_at,
+  })), { unread: all });
 });
 
-route('POST', '/api/notifications/read', (req, res) => {
-  const user = requireAuth(req, res);
+route('POST', '/api/notifications/read', async (req, res) => {
+  const user = await requireAuth(req, res);
   if (!user) return;
-  for (const n of db.notifications) {
-    if (n.userId === user.id) n.read = true;
-  }
-  saveDB();
+  await sbUpdate('notifications', { user_id: `eq.${user.id}`, read: 'eq.false' }, { read: true });
   ok(res);
 });
 
 /* ---------- 管理员（admin 专属） ---------- */
 
-route('GET', '/api/admin/users', (req, res, params, query) => {
-  if (!requireAdmin(req, res)) return;
+route('GET', '/api/admin/users', async (req, res, params, query) => {
+  if (!await requireAdmin(req, res)) return;
   const keyword = (query.get('keyword') || '').trim().toLowerCase();
-  let list = db.users.map(PUBLIC_USER).reverse();
+  let list = (await sbSelect('profiles', '?select=*&order=created_at.desc')).map(rowToUser);
   if (keyword) {
-    list = list.filter((u) => u.username.toLowerCase().includes(keyword) || u.nickname.toLowerCase().includes(keyword));
+    list = list.filter((u) => String(u.username).toLowerCase().includes(keyword) || String(u.nickname).toLowerCase().includes(keyword));
   }
-  // 附带每人发帖数，方便管理页展示
-  for (const u of list) u.postCount = db.posts.filter((p) => p.authorId === u.id).length;
-  ok(res, list);
+  const authorRows = await sbSelect('posts', '?select=author_id');
+  const counts = {};
+  for (const r of authorRows) counts[r.author_id] = (counts[r.author_id] || 0) + 1;
+  for (const u of list) u.postCount = counts[u.id] || 0;
+  ok(res, list.map(PUBLIC_USER).map((u) => ({ ...u, postCount: list.find((x) => x.id === u.id)?.postCount || 0 })));
 });
 
 /** 用户管理：封禁/解封（status）、授权/撤销管理员（role） */
 route('PATCH', '/api/admin/users/:id', async (req, res, params, query, body) => {
-  const admin = requireAdmin(req, res);
+  const admin = await requireAdmin(req, res);
   if (!admin) return;
-  const target = db.users.find((u) => u.id === params.id);
+  const target = await getProfile(params.id);
   if (!target) return fail(res, ...ERR.NOT_FOUND);
   if (target.id === admin.id) return fail(res, 400, 40001, '不能操作自己的账号');
 
   const { status, role } = body || {};
+  const patch = {};
   if (status !== undefined) {
     if (status !== 'active' && status !== 'banned') return fail(res, 400, 40001, 'status 必须是 active 或 banned');
     if (status === 'banned' && target.role === 'admin') return fail(res, 400, 40001, '不能封禁管理员账号');
-    target.status = status;
-    notify(target.id, 'admin', status === 'banned' ? '你的账号已被管理员封禁' : '你的账号已解除封禁');
+    patch.status = status;
+    await notify(target.id, 'admin', status === 'banned' ? '你的账号已被管理员封禁' : '你的账号已解除封禁');
   }
   if (role !== undefined) {
     if (role !== 'admin' && role !== 'user') return fail(res, 400, 40001, 'role 必须是 admin 或 user');
     if (role !== 'admin') {
-      const adminCount = db.users.filter((u) => u.role === 'admin' && u.status === 'active').length;
+      const adminCount = await sbCount('profiles', { role: 'eq.admin', status: 'eq.active' });
       if (target.role === 'admin' && adminCount <= 1) return fail(res, 400, 40001, '至少保留一名管理员');
     }
-    target.role = role;
-    notify(target.id, 'admin', role === 'admin' ? '你已被授权为管理员' : '你的管理员权限已被撤销');
+    patch.role = role;
+    await notify(target.id, 'admin', role === 'admin' ? '你已被授权为管理员' : '你的管理员权限已被撤销');
   }
-  saveDB();
-  ok(res, PUBLIC_USER(target));
+  if (Object.keys(patch).length) await sbUpdate('profiles', { id: target.id }, patch);
+  ok(res, PUBLIC_USER(await getProfile(target.id)));
 });
 
-/** 删除用户：连同其帖子/评论一并清理；不能删自己，最后一个管理员不可删 */
-route('DELETE', '/api/admin/users/:id', (req, res, params) => {
-  const admin = requireAdmin(req, res);
+/** 删除用户：连同其帖子/评论一并清理（FK 级联 + 删 auth 用户）；不能删自己，最后一个管理员不可删 */
+route('DELETE', '/api/admin/users/:id', async (req, res, params) => {
+  const admin = await requireAdmin(req, res);
   if (!admin) return;
-  const target = db.users.find((u) => u.id === params.id);
+  const target = await getProfile(params.id);
   if (!target) return fail(res, ...ERR.NOT_FOUND);
   if (target.id === admin.id) return fail(res, 400, 40001, '不能删除自己的账号');
   if (target.role === 'admin') return fail(res, 400, 40001, '请先撤销其管理员权限再删除');
 
-  const postIds = new Set(db.posts.filter((p) => p.authorId === target.id).map((p) => p.id));
-  db.posts = db.posts.filter((p) => !postIds.has(p.id));
-  db.comments = db.comments.filter((c) => c.authorId !== target.id && !postIds.has(c.postId));
-  db.claims = db.claims.filter((c) => c.claimantId !== target.id && !postIds.has(c.postId));
-  db.notifications = db.notifications.filter((n) => n.userId !== target.id);
-  db.users = db.users.filter((u) => u.id !== target.id);
-  saveDB();
+  await authDeleteUser(target.id); // auth.users 删除 -> 全业务表 FK 级联
+  await sbDelete('profiles', { id: target.id }).catch(() => {});
   ok(res, { id: target.id });
 });
 
 /** 平台统计：管理员首页仪表盘 */
-route('GET', '/api/admin/stats', (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const posts = db.posts;
-  ok(res, {
-    users: db.users.length,
-    bannedUsers: db.users.filter((u) => u.status === 'banned').length,
-    admins: db.users.filter((u) => u.role === 'admin').length,
-    posts: posts.length,
-    lost: posts.filter((p) => p.type === 'lost').length,
-    found: posts.filter((p) => p.type === 'found').length,
-    resolved: posts.filter((p) => p.status === 'resolved').length,
-    pendingClaims: db.claims.filter((c) => c.status === 'pending').length,
-    comments: db.comments.length,
-  });
+route('GET', '/api/admin/stats', async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  const [users, bannedUsers, admins, posts, lost, found, resolved, pendingClaims, comments] = await Promise.all([
+    sbCount('profiles'),
+    sbCount('profiles', { status: 'eq.banned' }),
+    sbCount('profiles', { role: 'eq.admin' }),
+    sbCount('posts'),
+    sbCount('posts', { type: 'eq.lost' }),
+    sbCount('posts', { type: 'eq.found' }),
+    sbCount('posts', { status: 'eq.resolved' }),
+    sbCount('claims', { status: 'eq.pending' }),
+    sbCount('comments'),
+  ]);
+  ok(res, { users, bannedUsers, admins, posts, lost, found, resolved, pendingClaims, comments });
 });
 
 /** 待处理认领列表（管理员快速处理入口） */
-route('GET', '/api/admin/claims', (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  ok(res, db.claims.filter((c) => c.status === 'pending').map(withPost));
+route('GET', '/api/admin/claims', async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  const pend = await sbSelect('claims', '?status=eq.pending&select=*&order=created_at.desc');
+  const ids = [...new Set(pend.map((c) => c.post_id))];
+  const posts = ids.length
+    ? await sbSelect('posts', `?id=in.(${ids.join(',')})&select=id,title,type`)
+    : [];
+  const postMap = new Map(posts.map((p) => [p.id, p]));
+  ok(res, pend.map((c) => {
+    const p = postMap.get(c.post_id);
+    return {
+      id: c.id, postId: c.post_id, claimantId: c.claimant_id, claimantName: c.claimant_name,
+      answer: c.answer, status: c.status, createdAt: c.created_at, resolvedAt: c.resolved_at,
+      postTitle: p?.title || '(已删除)', postType: p?.type,
+    };
+  }));
 });
 
 /* ============================================================
- * 静态文件：托管 预览版.html / 落地页.html
+ * 种子数据：首次启动（profiles 为空）时自动创建演示账号与内容
+ * ============================================================ */
+
+async function seedIfEmpty() {
+  const existing = await sbCount('profiles');
+  if (existing > 0) return false;
+
+  console.log('[seed] 数据库为空，正在写入演示数据 ...');
+  const t = nowISO();
+  const ago = (h) => new Date(Date.now() - h * 3600 * 1000).toISOString();
+
+  const mkUser = async (phone, nickname, role, studentId) => {
+    const authUser = await authCreateUser(phone, '123456', nickname, studentId, role);
+    await sbInsert('profiles', {
+      id: authUser.id, phone, nickname, role, status: 'active',
+      student_id: studentId || '', created_at: t,
+    });
+    return authUser.id;
+  };
+  const adminId = await mkUser('13800000001', '拾光管理员', 'admin', '');
+  const demoId  = await mkUser('13800000002', '王同学', 'user', '20230101');
+  const liId    = await mkUser('13800000003', '李同学', 'user', '20230218');
+  const zhaoId  = await mkUser('13800000004', '赵同学', 'user', '');
+  const U = { u_demo: demoId, u_li: liId, u_zhao: zhaoId, u_admin: adminId };
+
+  const P = (o) => ({
+    images: [], tags: [], status: 'open', view_count: 0, liked_by: [], resolved_at: null,
+    location_detail: '', event_time: o.created_at, updated_at: o.created_at, ...o,
+  });
+  const posts = [
+    P({ id: 'p_1', type: 'lost', title: '一串钥匙（挂蓝色小熊挂坠）', category: '钥匙',
+      description: '主校区体育馆更衣室附近丢失一串钥匙，带蓝色小熊挂坠和一个公交卡扣。有拾到请联系，请帮忙转发！',
+      location: '体育馆', contact: { method: 'phone', value: '13812340101' },
+      author_id: demoId, author_name: '王同学', created_at: ago(30), view_count: 23, liked_by: [liId] }),
+    P({ id: 'p_2', type: 'found', title: '捡到银色 iPhone 14（已交保卫处前先来登记）', category: '电子产品',
+      description: '第一食堂一楼靠窗座位捡到银色 iPhone 14，锁屏完好。先在这里登记，失主描述锁屏壁纸即可认领。',
+      location: '第一食堂', location_detail: '一楼靠窗', contact: { method: 'wechat', value: 'li_wen_2023' },
+      author_id: liId, author_name: '李同学', created_at: ago(26), view_count: 41, liked_by: [demoId, zhaoId] }),
+    P({ id: 'p_3', type: 'lost', title: '黑色耐克外套（L 码）', category: '衣物',
+      description: '操场东看台看球时把外套落下了，黑色耐克 L 码，袖口有洗旧的白色logo。里面有校园卡一张。',
+      location: '操场', location_detail: '东看台', contact: { method: 'phone', value: '15912340303' },
+      author_id: zhaoId, author_name: '赵同学', created_at: ago(48), view_count: 9 }),
+    P({ id: 'p_4', type: 'lost', title: 'AirPods Pro 充电盒丢失（耳机还在）', category: '电子产品',
+      description: '第三教学楼 305 教室下课后丢失 AirPods Pro 充电盒，两只耳机还在身上。盒子底部有贴纸。',
+      location: '第三教学楼', location_detail: '305 教室', contact: { method: 'phone', value: '13612340505' },
+      author_id: demoId, author_name: '王同学', created_at: ago(70), view_count: 12 }),
+    P({ id: 'p_5', type: 'found', title: '捡到校园卡（姓名：李 xx）', category: '卡类证件',
+      description: '校医院大门口捡到一张校园卡，姓氏看得到是李。已拍照登记，失主带学生证来核对领取。',
+      location: '校医院', location_detail: '大门口', contact: { method: 'phone', value: '18812340606' },
+      author_id: demoId, author_name: '王同学', created_at: ago(20), view_count: 15, liked_by: [liId] }),
+    P({ id: 'p_6', type: 'found', title: '捡到电动车钥匙（带遥控器）', category: '钥匙',
+      description: '北门车棚地上捡的，雅迪的遥控钥匙。放在北门保安亭，失主去保安亭对特征领取。',
+      location: '北门', location_detail: '非机动车棚', contact: { method: 'phone', value: '13712340707' },
+      author_id: liId, author_name: '李同学', created_at: ago(15), view_count: 18 }),
+    P({ id: 'p_7', type: 'lost', title: '丢失校园卡（尾号 3210）', category: '卡类证件',
+      description: '图书馆二楼自习区丢的校园卡，尾号 3210。捡到的同学请联系我，有酬谢！',
+      location: '图书馆', location_detail: '二楼自习区', contact: { method: 'wechat', value: 'wang_demo_88' },
+      author_id: demoId, author_name: '王同学', created_at: ago(56), view_count: 30 }),
+    P({ id: 'p_8', type: 'lost', title: '丢失《高等数学（第七版）》，扉页写了名字', category: '书籍',
+      description: '第一教学楼三楼阅览室自习后书不见了，扉页有我的名字和班级。书不值钱但笔记很重要！',
+      location: '第一教学楼', location_detail: '三楼阅览室', contact: { method: 'phone', value: '15012340808' },
+      author_id: zhaoId, author_name: '赵同学', created_at: ago(80), view_count: 11 }),
+    P({ id: 'p_9', type: 'found', title: '捡到《线性代数》+ 一本活页笔记', category: '书籍',
+      description: '第一教学楼 201 教室放学后收拾到一本线代和活页笔记，笔记主人应该很认真，快来认领。',
+      location: '第一教学楼', location_detail: '201 教室', contact: { method: 'wechat', value: 'shiguang_li' },
+      author_id: liId, author_name: '李同学', created_at: ago(78), view_count: 14, liked_by: [demoId] }),
+    P({ id: 'p_10', type: 'lost', title: '丢失小米手环 8（已找到，谢谢各位）', category: '电子产品',
+      description: '周三落在操场器材室，已经找回。感谢帮忙转发和提供线索的同学！',
+      location: '操场', location_detail: '器材室', contact: { method: 'phone', value: '13812340101' },
+      status: 'resolved', resolved_at: ago(10),
+      author_id: demoId, author_name: '王同学', created_at: ago(120), view_count: 35 }),
+  ];
+  await sbInsert('posts', posts);
+
+  await sbInsert('comments', [
+    { id: uid('c'), post_id: 'p_2', author_id: zhaoId, author_name: '赵同学', content: '好人一生平安，我室友正找手机呢，我转告他', created_at: ago(20) },
+    { id: uid('c'), post_id: 'p_2', author_id: liId, author_name: '李同学', content: '对，一楼服务台有个本子专门登记这个', created_at: ago(18) },
+    { id: uid('c'), post_id: 'p_1', author_id: liId, author_name: '李同学', content: '昨天好像在更衣室门口见过一串钥匙，你去问问管理员？', created_at: ago(24) },
+  ]);
+  await sbInsert('notifications', [
+    { id: uid('n'), user_id: demoId, type: 'comment', content: '李同学 评论了你的帖子「一串钥匙（挂蓝色小熊挂坠）」', post_id: 'p_1', read: false, created_at: ago(24) },
+    { id: uid('n'), user_id: liId, type: 'like', content: '王同学 赞了你的帖子「捡到银色 iPhone 14（已交保卫处前先来登记）」', post_id: 'p_2', read: false, created_at: ago(20) },
+    { id: uid('n'), user_id: liId, type: 'claim', content: '王同学 申请认领你的帖子「捡到银色 iPhone 14（已交保卫处前先来登记）」，请核实处理', post_id: 'p_2', read: false, created_at: ago(12) },
+  ]);
+  await sbInsert('claims', [
+    { id: uid('cl'), post_id: 'p_2', claimant_id: demoId, claimant_name: '王同学',
+      answer: '锁屏壁纸是一只橘猫，手机壳背面夹了一张公交卡', status: 'pending', created_at: ago(12) },
+  ]);
+  console.log('[seed] 完成：4 个演示账号 + 10 条帖子 + 3 条评论 + 1 笔待处理认领');
+  return true;
+}
+
+/** 确保 Storage 存在 public bucket "uploads"（存在则跳过） */
+async function ensureUploadBucket() {
+  try {
+    const r = await sbFetch(`${SB_URL}/storage/v1/bucket/uploads`);
+    const bucket = await r.json().catch(() => null);
+    if (bucket && bucket.public) return;
+    if (bucket) {
+      await sbFetch(`${SB_URL}/storage/v1/bucket/uploads`, { method: 'PATCH', body: { public: true } });
+      return;
+    }
+  } catch {
+    // 404 -> 创建
+  }
+  await sbFetch(`${SB_URL}/storage/v1/bucket`, { method: 'POST', body: { name: 'uploads', public: true } })
+    .then(() => console.log('[storage] 已创建 public bucket "uploads"'))
+    .catch((e) => {
+      if (!/exists|duplicate/i.test(e.message)) console.error('[storage]', e.message);
+    });
+}
+
+/* ============================================================
+ * 静态文件：托管前端页面
  * ============================================================ */
 
 const MIME = {
@@ -876,7 +1070,6 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const pathname = decodeURIComponent(url.pathname);
 
-  // 浏览器跨域预检
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -888,29 +1081,20 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    // 静态页：/ 与 /preview 统一进终稿应用（页面内部按设备自动分流 ——
-    // PC 首页 = 落地页 1:1 复刻 + 全功能；移动端首页 = 原移动版效果）
     if (req.method === 'GET' && (pathname === '/' || pathname === '/preview')) {
       return serveStatic(res, '终稿.html');
     }
-    // 终稿：预览版全量功能 × 落地页海报风 × 真后端
     if (req.method === 'GET' && (pathname === '/app' || pathname === '/final' || pathname === '/终稿.html')) {
       return serveStatic(res, '终稿.html');
     }
     if (req.method === 'GET' && pathname === '/landing') {
       return serveStatic(res, '落地页.html');
     }
-    // 上传图片：URL /uploads/... 实际存放在 data/uploads/...
-    if (req.method === 'GET' && pathname.startsWith('/uploads/')) {
-      const safe = path.normalize(pathname).replace(/^([.][.][/\\])+/, '');
-      return serveStatic(res, path.join('data', safe));
-    }
     if (req.method === 'GET' && !pathname.startsWith('/api/')) {
       const safe = path.normalize(pathname).replace(/^([.][.][/\\])+/, '');
       return serveStatic(res, safe);
     }
 
-    // API 路由匹配
     const matched = routes.filter((r) => r.regex.test(pathname));
     if (!matched.length) return fail(res, ...ERR.NOT_FOUND);
     const r = matched.find((x) => x.method === req.method);
@@ -932,18 +1116,30 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-loadDB();
-server.listen(PORT, () => {
-  console.log('');
-  console.log('  拾光 · 校园失物招领 后端已启动');
-  console.log(`  地址:     http://localhost:${PORT}`);
-  console.log(`  数据文件: ${DB_FILE}`);
-  console.log('');
-  console.log('  管理员账号  admin   / 123456     （用户管理、删帖、统计、处理认领）');
-  console.log('  用户账号    demo    / 123456     （王同学）');
-  console.log('  用户账号    li      / 123456     （李同学）');
-  console.log('  用户账号    zhao    / 123456     （赵同学）');
-  console.log('');
-  console.log('  浏览器打开 http://localhost:' + PORT + ' 可直接看前端页面');
-  console.log('');
-});
+/* ============================================================
+ * 启动
+ * ============================================================ */
+
+(async () => {
+  try {
+    await seedIfEmpty();
+    await ensureUploadBucket();
+  } catch (e) {
+    console.error('[startup] 初始化失败，请检查 Supabase 配置与建表 SQL：', e.message);
+    process.exit(1);
+  }
+  server.listen(PORT, () => {
+    console.log('');
+    console.log('  拾光 · 校园失物招领 后端已启动（Supabase 模式）');
+    console.log(`  地址:       http://localhost:${PORT}`);
+    console.log(`  Supabase:   ${SB_URL}`);
+    console.log('');
+    console.log('  管理员账号  13800000001 / 123456   （用户管理、删帖、统计、处理认领）');
+    console.log('  用户账号    13800000002 / 123456   （王同学 demo）');
+    console.log('  用户账号    13800000003 / 123456   （李同学 li）');
+    console.log('  用户账号    13800000004 / 123456   （赵同学 zhao）');
+    console.log('');
+    console.log('  浏览器打开 http://localhost:' + PORT + ' 可直接看前端页面');
+    console.log('');
+  });
+})();

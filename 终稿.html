@@ -640,7 +640,7 @@ footer::before{content:"";position:absolute;top:-8px;left:50%;transform:translat
 .ld-panel li{display:flex;gap:12px;align-items:flex-start;padding:9px 0;font-size:clamp(15px,1.4vw,17px);font-weight:500}
 .ld-panel li svg{flex:0 0 auto;width:20px;height:20px;margin-top:4px;stroke:var(--ink);fill:none;
   stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.ld-panel .btn{background:var(--card)}
+.ld-panel .btn{background:var(--card);color:var(--ink)}
 .ld-vs{position:absolute;left:50%;top:50%;z-index:5;transform:translate(-50%,-50%) rotate(-8deg);
   width:92px;height:92px;border-radius:50%;background:var(--paper);border:2.5px solid var(--ink);
   box-shadow:5px 5px 0 var(--ink);display:grid;place-items:center;font-family:var(--serif);
@@ -1063,12 +1063,9 @@ function bindHomeEvents(){
 
   document.getElementById('viewTabs').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.v === 'map'){
-      // 地图模式依赖高德 key，未配置时诚实降级（与离线预览版行为一致）
-      return toast('地图模式需要配置高德 key，当前未配置，先逛列表吧');
-    }
-    homeState.view = 'list';
+    homeState.view = b.dataset.v;
     document.querySelectorAll('#viewTabs button').forEach(x => x.classList.toggle('on', x === b));
+    renderHomeContent();
   };
   document.getElementById('typeTabs').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -1278,8 +1275,60 @@ function homeTplPc(){
 function viewHome(){
   $app.innerHTML = IS_MOBILE ? homeTplMobile() : homeTplPc();
   bindHomeEvents();
-  loadPosts(true);
+  renderHomeContent();
   observeRise();
+}
+
+/* ---------- 大厅内容区：列表 / 地图 切换 ---------- */
+function renderHomeContent(){
+  const content = document.getElementById('content'); if (!content) return;
+  if (homeState.view === 'map'){
+    content.innerHTML = `<div id="mapView" style="position:relative;height:min(62vh,560px);border:2px solid var(--ink);border-radius:10px;overflow:hidden;box-shadow:6px 6px 0 rgba(43,33,24,.16);background:var(--paper-2)"></div>`;
+    loadHomeMap();
+  } else {
+    content.innerHTML = `<div class="board" id="board">
+      <div class="sk-card lost tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+      <div class="sk-card found tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+      <div class="sk-card lost tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+      <div class="sk-card found tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+    </div><div class="load-more" id="more"></div>`;
+    loadPosts(true);
+  }
+}
+
+/** 大厅地图：当前筛选下所有带坐标的启事打点，橙=寻物 绿=招领 */
+async function loadHomeMap(){
+  const el = document.getElementById('mapView'); if (!el) return;
+  const tip = (html) => el.insertAdjacentHTML('beforeend',
+    `<div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none"><div style="background:var(--paper-2);border:2px solid var(--ink);border-radius:8px;padding:12px 20px">${html}</div></div>`);
+  try { await loadAmap(); }
+  catch(e){ tip(`<span class="hand">${esc(e.message)}</span>`); return; }
+  const map = new AMap.Map(el, { zoom: 14, center: [116.397428, 39.90923], viewMode: '2D' });
+  const q = new URLSearchParams({ page: 1, pageSize: 100 });
+  if (homeState.type !== 'all') q.set('type', homeState.type);
+  if (homeState.category !== '全部') q.set('category', homeState.category);
+  if (homeState.keyword) q.set('keyword', homeState.keyword);
+  try {
+    const r = await api('GET', '/posts?' + q, undefined, { silent: true });
+    const pts = (r.data.list || []).filter(p => p.lng && p.lat);
+    if (!pts.length){
+      tip(`<span class="hand">地图上还空着。</span><br><span style="font-size:13px;color:var(--ink-60)">发启事时点「在地图上标记」，位置就会出现在这里</span>`);
+      return;
+    }
+    const info = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) });
+    pts.forEach(p => {
+      const m = new AMap.Marker({
+        position: [p.lng, p.lat], title: p.title,
+        content: `<div title="${esc(p.title)}" style="width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #2B2118;background:${p.type === 'lost' ? '#FF7A45' : '#12B886'};box-shadow:2px 2px 0 rgba(43,33,24,.35)"></div>`,
+      });
+      m.on('click', () => {
+        info.setContent(`<div style="padding:10px 14px;font:500 13px/1.6 'Noto Sans SC',sans-serif;max-width:230px"><b style="font-size:14px">${esc(p.title)}</b><br><span style="color:#6B5D4F">${esc(p.location || '地点未知')}</span><br><a href="#/post/${esc(p.id)}" style="color:${p.type === 'lost' ? '#E85F2B' : '#0E9C71'};font-weight:700">查看启事 →</a></div>`);
+        info.open(map, m.getPosition());
+      });
+      map.add(m);
+    });
+    map.setFitView(null, false, [50, 50, 50, 50]);
+  } catch(e){ tip(esc(e.message)); }
 }
 
 function circleSvg(){
@@ -1483,13 +1532,14 @@ function viewLogin(q){
 /* ============================================================
  * 发布 / 编辑（图片上传、联系方式、地图标记占位、无图确认）
  * ============================================================ */
-const publishState = { type: 'lost', images: [] };
+const publishState = { type: 'lost', images: [], map: null };
 
 function viewPublish(q){
   const editId = q.get('id');
   // 双入口按钮带 ?type=lost/found 预选类型；编辑时随后端数据覆盖
   publishState.type = q.get('type') === 'found' ? 'found' : 'lost';
   publishState.images = [];
+  publishState.map = null;
   $app.innerHTML = `
   <div class="wrap"><div class="form-page">
     <div class="paper-card tape">
@@ -1521,7 +1571,7 @@ function viewPublish(q){
       </div>
       <div class="field"><label>地图标记 <span style="color:var(--ink-60);font-weight:400">（选填，在地图上标出位置）</span></label>
         <button class="btn sm ghost" id="pMap">📍 在地图上标记</button>
-        <div class="hint">点击地图标记丢失/拾取位置，marker 可拖动微调（需配置高德 key）</div>
+        <div class="hint">点击地图标记丢失/拾取位置，标记可拖动微调，地址自动填入；带标记的启事会出现在大厅地图上</div>
       </div>
       <div class="field"><label>详细描述</label><textarea id="pDesc" maxlength="500" placeholder="描述物品特征、内含物等，越具体越容易匹配"></textarea></div>
       <div class="field"><label>联系方式</label>
@@ -1550,7 +1600,7 @@ function viewPublish(q){
   document.getElementById('pContactType').onchange = e => {
     document.getElementById('pContactVal').placeholder = e.target.value === 'wechat' ? '请输入账号' : '请输入 11 位手机号';
   };
-  document.getElementById('pMap').onclick = () => toast('地图模式需要配置高德 key，当前未配置');
+  document.getElementById('pMap').onclick = () => openMapPicker();
   renderUpGrid();
 
   if (editId){
@@ -1565,6 +1615,8 @@ function viewPublish(q){
       document.getElementById('pLoc').value = p.location || '';
       document.getElementById('pLocD').value = p.locationDetail || '';
       if (p.eventTime) document.getElementById('pTime').value = p.eventTime.slice(0,16);
+      if (p.lng && p.lat) publishState.map = { lng: p.lng, lat: p.lat };
+      syncMapBtn();
       if (p.contact && !p.contact.masked){
         document.getElementById('pContactType').value = p.contact.method;
         document.getElementById('pContactVal').value = p.contact.value;
@@ -1636,6 +1688,8 @@ function viewPublish(q){
       eventTime: timeVal ? new Date(timeVal).toISOString() : undefined,
       contact: cVal ? { method: cType, value: cVal } : null,
       images: publishState.images,
+      lng: publishState.map ? publishState.map.lng : undefined,
+      lat: publishState.map ? publishState.map.lat : undefined,
     };
     try {
       if (editId){
@@ -1649,6 +1703,81 @@ function viewPublish(q){
       }
     } catch(e){ err.textContent = e.message; }
   };
+}
+
+/* ---------- 地图选点弹层：点击放置标记（可拖动），反查地址可回填地点 ---------- */
+function syncMapBtn(){
+  const b = document.getElementById('pMap'); if (!b) return;
+  b.textContent = publishState.map ? `📍 已标记 ${publishState.map.lng.toFixed(4)}, ${publishState.map.lat.toFixed(4)}（点击修改）` : '📍 在地图上标记';
+  b.className = 'btn sm ' + (publishState.map ? 'green' : 'ghost');
+}
+
+function openMapPicker(){
+  const mask = document.createElement('div');
+  mask.className = 'mask';
+  mask.innerHTML = `<div class="box" style="max-width:720px;width:92vw">
+    <h3>标记位置</h3>
+    <p style="font-size:13.5px;color:var(--ink-60)">点击地图放置标记（可拖动微调），确认后地址会自动填入「地点」。</p>
+    <div id="pkWrap" style="position:relative;height:420px;border:2px solid var(--ink);border-radius:8px;overflow:hidden;margin:12px 0">
+      <div id="pkMap" style="height:100%"></div>
+      <div id="pkAddr" style="position:absolute;left:10px;right:10px;bottom:10px;background:rgba(255,253,249,.95);border:1.5px solid var(--ink);border-radius:6px;padding:8px 12px;font-size:13px">正在加载地图…</div>
+    </div>
+    <div class="row" style="display:flex;gap:10px;align-items:center">
+      <button class="btn sm ghost" id="pkClear">清除标记</button>
+      <span style="flex:1"></span>
+      <button class="btn sm" id="pkCancel">取消</button>
+      <button class="btn sm green" id="pkOk">确认标记</button>
+    </div>
+  </div>`;
+  document.body.appendChild(mask);
+
+  let map, marker, cur = publishState.map ? { ...publishState.map } : null, lastAddr = '';
+  loadAmap().then(() => {
+    map = new AMap.Map('pkMap', {
+      zoom: cur ? 17 : 15,
+      center: cur ? [cur.lng, cur.lat] : [116.397428, 39.90923],
+      viewMode: '2D',
+    });
+    const geo = new AMap.Geocoder();
+    function place(lng, lat, reverse = true){
+      cur = { lng, lat };
+      if (!marker){
+        marker = new AMap.Marker({ position: [lng, lat], draggable: true, cursor: 'move' });
+        map.add(marker);
+        marker.on('dragend', () => { const p = marker.getPosition(); place(p.getLng(), p.getLat()); });
+      } else marker.setPosition([lng, lat]);
+      document.getElementById('pkAddr').textContent = `经纬度：${lng.toFixed(6)}, ${lat.toFixed(6)}（反查地址中…）`;
+      if (reverse) geo.getAddress([lng, lat], (st, res) => {
+        lastAddr = (st === 'complete' && res.regeocode?.formattedAddress) ? res.regeocode.formattedAddress.replace(/^中国/, '') : '';
+        document.getElementById('pkAddr').innerHTML = (lastAddr ? '📍 ' + esc(lastAddr) + '<br>' : '') +
+          `<span style="color:var(--ink-60)">经纬度：${lng.toFixed(6)}, ${lat.toFixed(6)}</span>`;
+      });
+    }
+    if (cur) place(cur.lng, cur.lat, false);
+    else {
+      AMap.plugin('AMap.Geolocation', () => {
+        const gl = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 4000 });
+        gl.getCurrentPosition((st, res) => {
+          if (st === 'complete'){ map.setZoomAndCenter(16, [res.position.getLng(), res.position.getLat()]); }
+        });
+      });
+    }
+    map.on('click', e => place(e.lnglat.getLng(), e.lnglat.getLat()));
+    mask.querySelector('#pkCancel').onclick = () => mask.remove();
+    mask.querySelector('#pkClear').onclick = () => {
+      cur = null; lastAddr = '';
+      if (marker){ map.remove(marker); marker = null; }
+      document.getElementById('pkAddr').textContent = '已清除标记，点击地图重新放置';
+    };
+    mask.querySelector('#pkOk').onclick = () => {
+      publishState.map = cur;
+      syncMapBtn();
+      if (cur && lastAddr && !document.getElementById('pLoc').value.trim()){
+        document.getElementById('pLoc').value = lastAddr;
+      }
+      mask.remove();
+    };
+  }).catch(e => { mask.remove(); toast(e.message); });
 }
 
 /** 图片压缩：长边压到 1280，转 jpeg，减小上传体积 */
@@ -1763,6 +1892,7 @@ async function viewDetail(id){
         <span><b>${esc(post.authorName)}</b>${post.studentId ? ' <span class="cert">已认证</span>' : ''}</span>
         <span>发布于 ${fmtTime(post.createdAt)}</span>
         <span>${icon('pin')} ${esc(post.location || '地点未知')}${post.locationDetail ? ' · ' + esc(post.locationDetail) : ''}</span>
+        ${post.lng && post.lat ? `<span><a href="https://uri.amap.com/navigation?to=${post.lng},${post.lat},${encodeURIComponent(post.title)}&mode=car&src=shiguang&coordinate=gaode&callnative=1" target="_blank" rel="noopener" style="color:var(--orange);font-weight:700;text-decoration:underline">📍 导航去这里</a></span>` : ''}
         <span>${icon('clock')} ${fmtDay(post.eventTime)}</span>
         <span>${icon('eye')} 浏览 ${post.viewCount}</span>
         ${resolved ? `<span>解决时间 ${fmtDay(post.resolvedAt)}</span>` : ''}
@@ -2146,6 +2276,24 @@ async function viewAdmin(){
     if (!(await confirmBox('删除用户', '将同时删除其全部启事与评论，确定？'))) return;
     try { await api('DELETE', '/admin/users/' + b.dataset.delu); toast('用户已删除'); viewAdmin(); } catch(e){ toast(e.message); }
   });
+}
+
+/* ---------- 高德地图（Web端 JS API 2.0） ---------- */
+const AMAP_KEY = 'cdf7474452875cc858264fbda229a2c4';
+const AMAP_SEC = '26af3884934caaa9e51234b017db865f';
+let _amapLoading = null;
+function loadAmap(){
+  if (window.AMap) return Promise.resolve();
+  if (_amapLoading) return _amapLoading;
+  window._AMapSecurityConfig = { securityJsCode: AMAP_SEC };
+  _amapLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://webapi.amap.com/maps?v=2.0&key=' + AMAP_KEY + '&plugin=AMap.Geocoder,AMap.Geolocation';
+    s.onload = resolve;
+    s.onerror = () => { _amapLoading = null; reject(new Error('高德地图加载失败，请检查网络')); };
+    document.head.appendChild(s);
+  });
+  return _amapLoading;
 }
 
 /* ---------- 启动 ---------- */

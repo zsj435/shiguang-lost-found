@@ -192,7 +192,11 @@ const rowToPost = (r) => ({
   status: r.status, authorId: r.author_id, authorName: r.author_name,
   likedBy: r.liked_by || [], viewCount: r.view_count || 0,
   createdAt: r.created_at, updatedAt: r.updated_at, resolvedAt: r.resolved_at,
+  lng: r.lng ?? null, lat: r.lat ?? null,
 });
+
+/** 经纬度合法值：有限数字且在合理范围内，否则 null */
+const toLngLat = (v) => (Number.isFinite(+v) && Math.abs(+v) <= 180 ? +v : null);
 
 /** 按 id 查用户资料；joinBanned 判断在调用处做 */
 async function getProfile(id) {
@@ -603,6 +607,7 @@ route('POST', '/api/posts', async (req, res, params, query, body) => {
     tags: Array.isArray(tags) ? tags.slice(0, 5).map(String) : [],
     status: 'open', author_id: user.id, author_name: user.nickname,
     liked_by: [], view_count: 0,
+    lng: toLngLat(body.lng), lat: toLngLat(body.lat),
     created_at: t, updated_at: t, resolved_at: null,
   };
   const saved = await sbInsert('posts', row);
@@ -627,6 +632,8 @@ route('PUT', '/api/posts/:id', async (req, res, params, query, body) => {
   for (const [from, to] of Object.entries(map)) {
     if (body && body[from] !== undefined) patch[to] = body[from];
   }
+  if (body && body.lng !== undefined) patch.lng = toLngLat(body.lng);
+  if (body && body.lat !== undefined) patch.lat = toLngLat(body.lat);
   if (patch.status === 'resolved') patch.resolved_at = nowISO();
   const updated = await sbUpdate('posts', { id: params.id }, patch);
   ok(res, rowToPost(Array.isArray(updated) ? updated[0] : updated));

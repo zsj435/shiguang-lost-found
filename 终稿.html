@@ -1463,6 +1463,7 @@ function viewLogin(q){
           phone, password,
           nickname: document.getElementById('fNick').value.trim() || ('用户' + phone.slice(-4)),
           studentId: document.getElementById('fSid').value.trim(),
+          clientId: Track.cid,
         });
         toast('注册成功');
       } else {
@@ -1988,17 +1989,91 @@ async function viewNotifications(){
 }
 
 /* ============================================================
+ * 管理员后台 · 数据分析面板（纯 CSS 条形图，不依赖外部库）
+ * ============================================================ */
+function renderAnalytics(a){
+  const pct = (x) => (x === null || x === undefined) ? '—' : Math.round(x * 100) + '%';
+  const maxNew = Math.max(1, ...a.dailyNewUsers.map(x => x.count));
+  const dayLabel = (d) => d.slice(5); // '2026-09-11' -> '09-11'
+  const today = a.range.to;
+
+  const pageCard = (name, s) => `
+    <div class="stat"><div class="num">${s.uvToday}</div><div class="lbl">${name}UV 今日</div>
+      <div style="font-size:12px;color:var(--ink-60)">PV ${s.pvToday} ｜ 累计 UV ${s.uvTotal} · PV ${s.pvTotal}</div></div>`;
+
+  const trendRows = a.dailyNewUsers.map((x, i) => {
+    const d = a.duration.daily[i];
+    const full = a.dailyFullView[i].count;
+    const w = Math.round(x.count / maxNew * 100);
+    return `<tr${x.date === today ? ' style="background:var(--orange-soft)"' : ''}>
+      <td>${dayLabel(x.date)}${x.date === today ? ' <span style="color:var(--orange);font-size:11px">今天</span>' : ''}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div style="height:10px;width:${Math.max(w, x.count ? 4 : 0)}%;background:var(--orange);border-radius:2px"></div><b>${x.count}</b></div></td>
+      <td>${full}</td>
+      <td>${d.activeUsers}</td>
+      <td>${d.avgMinutes}</td>
+      <td>${d.totalMinutes}</td>
+    </tr>`;
+  }).join('');
+
+  const retRows = a.retention.slice().reverse().map(r => `
+    <tr${r.cohort === today ? ' style="background:var(--orange-soft)"' : ''}>
+      <td>${r.cohort}</td><td><b>${r.newUsers}</b>${r.tracked < r.newUsers ? `<span style="font-size:11px;color:var(--ink-60)">（${r.tracked} 可跟踪）</span>` : ''}</td>
+      <td>${pct(r.d1)}</td><td>${pct(r.d3)}</td><td>${pct(r.d7)}</td>
+      <td>${pct(r.d15)}</td><td>${pct(r.d30)}</td>
+    </tr>`).join('');
+
+  const durDays = a.duration.daily.slice().reverse().filter(x => x.users.length);
+  const durRows = durDays.map(x => `
+    <div style="margin-bottom:10px">
+      <b style="font-size:13.5px">${x.date}</b>
+      <span style="color:var(--ink-60);font-size:12.5px">（人均 ${x.avgMinutes} 分钟）</span>
+      <div style="font-size:12.5px;color:var(--ink-60)">${x.users.map(u => `${esc(u.nickname)} ${u.minutes}′`).join(' ｜ ')}</div>
+    </div>`).join('');
+
+  return `
+  <h3 class="section-t">数据分析</h3>
+  <div class="stats-grid">
+    ${pageCard('首页', a.pages.home)}
+    ${pageCard('后台', a.pages.admin)}
+    <div class="stat"><div class="num">${a.duration.overallAvgMinutes}</div><div class="lbl">总体人均时长（分钟/人日）</div></div>
+    <div class="stat"><div class="num">${a.dailyFullView.reduce((s, x) => s + x.count, 0)}</div><div class="lbl">${a.range.days}天完整浏览（人次）</div></div>
+  </div>
+
+  <h4 style="margin:18px 0 8px;font-size:15px">每日趋势（近 ${a.range.days} 天）</h4>
+  <table class="tbl"><thead><tr><th>日期</th><th>新增用户</th><th>完整浏览首页</th><th>活跃设备</th><th>人均时长(分)</th><th>总时长(分)</th></tr></thead>
+  <tbody>${trendRows}</tbody></table>
+
+  <h4 style="margin:18px 0 8px;font-size:15px">用户留存</h4>
+  <table class="tbl"><thead><tr><th>注册日期</th><th>新用户</th><th>次日留存</th><th>3日</th><th>7日</th><th>15日</th><th>30日</th></tr></thead>
+  <tbody>${retRows}</tbody></table>
+
+  ${durDays ? `<details style="margin-top:14px"><summary style="cursor:pointer;font-size:14px;font-weight:700">用户时长明细（按天展开）</summary>
+    <div style="padding:12px 4px">${durRows}</div></details>` : ''}
+
+  <details style="margin-top:6px"><summary style="cursor:pointer;font-size:13px;color:var(--ink-60)">指标口径说明</summary>
+    <div style="font-size:12.5px;color:var(--ink-60);line-height:1.9;padding:8px 2px">
+      · 新增用户：当天完成注册的账号数<br>
+      · 完整浏览首页：当天滚动达到首页 80% 的设备（去重，未注册访客也统计，每会话记一次）<br>
+      · 留存率：某天注册的用户在第 N 天当天有任何活跃行为的比例（活跃 = 打开任意页面或心跳在线）；窗口未到显示 —<br>
+      · 使用时长：页面可见时每 15 秒一次心跳，时长 = 心跳数 × 15 秒；切后台/锁屏不计；人均 = 当天总时长 ÷ 当天活跃设备数<br>
+      · UV：去重访客设备数；PV：页面打开次数
+    </div>
+  </details>`;
+}
+
+/* ============================================================
  * 管理员后台
  * ============================================================ */
 async function viewAdmin(){
   $app.innerHTML = `<div class="wrap"><div class="detail" style="max-width:960px"><div class="empty">核对台账中…</div></div></div>`;
-  let stats, users, pendClaims;
+  let stats, users, pendClaims, ana;
   try {
     [stats, users, pendClaims] = await Promise.all([
       api('GET', '/admin/stats', undefined, { silent: true }).then(r => r.data),
       api('GET', '/admin/users', undefined, { silent: true }).then(r => r.data),
       api('GET', '/admin/claims', undefined, { silent: true }).then(r => r.data),
     ]);
+    ana = await api('GET', '/admin/analytics?days=14', undefined, { silent: true }).then(r => r.data).catch(() => null);
   } catch(e){ $app.querySelector('.detail').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   const me = store.user;
 
@@ -2017,6 +2092,8 @@ async function viewAdmin(){
       <div class="stat"><div class="num">${stats.pendingClaims}</div><div class="lbl">待处理认领</div></div>
       <div class="stat"><div class="num" style="color:${stats.bannedUsers ? 'var(--red)' : 'inherit'}">${stats.bannedUsers}</div><div class="lbl">封禁中</div></div>
     </div>
+
+    ${ana ? renderAnalytics(ana) : ''}
 
     <h3 class="section-t">待处理认领（${pendClaims.length}）</h3>
     ${pendClaims.length ? pendClaims.map(c => `
@@ -2072,6 +2149,53 @@ async function viewAdmin(){
 }
 
 /* ---------- 启动 ---------- */
+
+/* ============================================================
+ * 行为统计埋点（UV / PV / 使用时长 / 首页滚动深度）
+ * 口径：访客设备ID存 localStorage（不注册也统计）；
+ *       心跳 15 秒一次且仅页面可见时发送（切后台不计时长）；
+ *       首页滚动 ≥80% 记一次「完整浏览」（每会话最多记一次）
+ * ============================================================ */
+const Track = (() => {
+  let cid = localStorage.getItem('sg_cid');
+  if (!cid) { cid = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); localStorage.setItem('sg_cid', cid); }
+  let sid = sessionStorage.getItem('sg_sid');
+  if (!sid) { sid = 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); sessionStorage.setItem('sg_sid', sid); }
+
+  const pageName = () => {
+    const h = (location.hash || '#/').replace(/^#\//, '').split('?')[0];
+    if (!h) return 'home';
+    if (h.startsWith('admin')) return 'admin';
+    if (h.startsWith('post/')) return 'post';
+    if (h.startsWith('publish')) return 'publish';
+    if (h.startsWith('login')) return 'login';
+    return h.slice(0, 24);
+  };
+  let curPage = pageName();
+
+  function send(event, page) {
+    try {
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events: [{ clientId: cid, sid, page: page || curPage, event }] }) }).catch(() => {});
+    } catch {}
+  }
+  function pageView() { curPage = pageName(); send('page_view'); }
+
+  // 使用时长心跳
+  setInterval(() => { if (document.visibilityState === 'visible') send('heartbeat'); }, 15000);
+  // 首页滚动深度（每会话记一次）
+  window.addEventListener('scroll', () => {
+    if (curPage !== 'home' || sessionStorage.getItem('sg_fv')) return;
+    const doc = document.documentElement;
+    const progress = (doc.scrollTop + window.innerHeight) / Math.max(doc.scrollHeight, 1);
+    if (progress >= 0.8) { sessionStorage.setItem('sg_fv', '1'); send('home_scroll_80'); }
+  }, { passive: true });
+  window.addEventListener('hashchange', pageView);
+
+  return { cid, pageView };
+})();
+Track.pageView();
+
 renderTop(); renderNav(); initDecor(); handleRoute();
 </script>
 </body>

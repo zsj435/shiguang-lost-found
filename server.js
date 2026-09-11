@@ -380,6 +380,7 @@ route('POST', '/api/auth/register', async (req, res, params, query, body) => {
     id: authUser.id, phone: String(phone),
     nickname: String(nickname || `用户${phone.slice(-4)}`),
     role: 'user', status: 'active', student_id: String(studentId || ''), created_at: nowISO(),
+    client_id: String(body?.clientId || '').slice(0, 64),
   });
   // 注册完成直接登录，把 Supabase 会话令牌发给前端
   const session = await authLogin(String(phone), String(password));
@@ -926,9 +927,155 @@ route('GET', '/api/admin/claims', async (req, res) => {
   }));
 });
 
-/* ============================================================
- * 种子数据：首次启动（profiles 为空）时自动创建演示账号与内容
- * ============================================================ */
+/* ---------- 行为统计（埋点 + 分析） ---------- */
+
+/** 埋点上报：公开接口，未注册访客也统计 */
+route('POST', '/api/track', async (req, res, params, query, body) => {
+  const events = Array.isArray(body?.events) ? body.events.slice(0, 20) : [];
+  if (!events.length) return fail(res, 400, 40001, '没有事件');
+  // 请求若带合法登录态，则把事件关联到用户（关联失败不报错，访客事件照常收）
+  let userId = null;
+  try { userId = (await getAuth(req)).user?.id || null; } catch {}
+  const rows = [];
+  for (const ev of events) {
+    const clientId = String(ev?.clientId || '').slice(0, 64);
+    const event = String(ev?.event || '').slice(0, 32);
+    if (!clientId || !event) continue;
+    rows.push({
+      client_id: clientId,
+      sid: String(ev?.sid || '').slice(0, 64),
+      user_id: userId,
+      page: String(ev?.page || '').slice(0, 32),
+      event,
+      created_at: nowISO(),
+    });
+  }
+  if (!rows.length) return fail(res, 400, 40001, '事件格式错误');
+  await sbInsert('track_events', rows);
+  ok(res, { saved: rows.length });
+});
+
+/** 本地日期（Asia/Shanghai）-> 'YYYY-MM-DD' */
+const localDate = (iso) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+const addDays = (dateStr, k) => {
+  const d = new Date(`${dateStr}T00:00:00+08:00`);
+  d.setDate(d.getDate() + k);
+  return localDate(d.toISOString());
+};
+
+/** 管理端数据分析报表 */
+route('GET', '/api/admin/analytics', async (req, res, params, query) => {
+  if (!(await requireAdmin(req, res))) return;
+  const days = Math.min(60, Math.max(7, Number(query.get('days')) || 14));
+  const todayStr = localDate(nowISO());
+
+  // 窗口起点（本地日的零点，往前推 days-1 天）
+  const fromDate = new Date(`${addDays(todayStr, -(days - 1))}T00:00:00+08:00`);
+  const fromISO = fromDate.toISOString();
+  const dateList = [];
+  for (let i = 0; i < days; i++) dateList.push(addDays(todayStr, -(days - 1 - i)));
+
+  const [profiles, events] = await Promise.all([
+    sbSelect('profiles', `?select=client_id,nickname,created_at&created_at=gte.${fromISO}`),
+    sbSelect('track_events', `?select=client_id,page,event,created_at&created_at=gte.${fromISO}&limit=100000`),
+  ]);
+
+  // ---- 每日新增用户 ----
+  const dailyNewUsers = Object.fromEntries(dateList.map((d) => [d, 0]));
+  const cohortCids = {}; // 注册日 -> 该日新用户的 client_id 列表
+  for (const p of profiles) {
+    const d = localDate(p.created_at);
+    if (!(d in dailyNewUsers)) continue;
+    dailyNewUsers[d]++;
+    if (p.client_id) (cohortCids[d] ||= []).push(p.client_id);
+  }
+
+  // ---- 每日活跃设备集合（任意事件）----
+  const activeByDate = {};
+  for (const e of events) {
+    const d = localDate(e.created_at);
+    (activeByDate[d] ||= new Set()).add(e.client_id);
+  }
+
+  // ---- 每日完整浏览首页（滚动 ≥ 80%）----
+  const dailyFullView = Object.fromEntries(dateList.map((d) => [d, new Set()]));
+  for (const e of events) {
+    if (e.event !== 'home_scroll_80') continue;
+    const d = localDate(e.created_at);
+    if (dailyFullView[d]) dailyFullView[d].add(e.client_id);
+  }
+
+  // ---- 使用时长（心跳 15s 一个 = 0.25 分钟）----
+  const HB_MIN = 0.25, HB_CAP = 2400; // 单设备单日心跳上限 2400 个（=10 小时）防异常
+  const hbCount = {}; // `${date}|${cid}` -> count
+  for (const e of events) {
+    if (e.event !== 'heartbeat') continue;
+    const d = localDate(e.created_at);
+    const key = `${d}|${e.client_id}`;
+    hbCount[key] = (hbCount[key] || 0) + 1;
+  }
+  const nickByCid = {};
+  for (const p of profiles) if (p.client_id) nickByCid[p.client_id] = p.nickname;
+  const dailyDuration = dateList.map((d) => {
+    let totalMin = 0, users = [];
+    for (const key in hbCount) {
+      if (!key.startsWith(d + '|')) continue;
+      const min = Math.min(hbCount[key], HB_CAP) * HB_MIN;
+      totalMin += min;
+      const cid = key.slice(d.length + 1);
+      users.push({ clientId: cid, nickname: nickByCid[cid] || '访客', minutes: Math.round(min * 10) / 10 });
+    }
+    users.sort((a, b) => b.minutes - a.minutes);
+    const activeUsers = (activeByDate[d] || new Set()).size;
+    return {
+      date: d,
+      activeUsers,
+      avgMinutes: activeUsers ? Math.round((totalMin / activeUsers) * 10) / 10 : 0,
+      totalMinutes: Math.round(totalMin * 10) / 10,
+      users,
+    };
+  });
+  const totalMin = dailyDuration.reduce((s, x) => s + x.totalMinutes, 0);
+  const personDays = dailyDuration.reduce((s, x) => s + (x.activeUsers ? 1 : 0) * x.activeUsers, 0);
+
+  // ---- 留存：按注册日 cohort，看第 N 天活跃比例 ----
+  const RETENTION_KEYS = [1, 3, 7, 15, 30];
+  const retention = dateList.map((d) => {
+    const cids = cohortCids[d] || [];
+    const row = { cohort: d, newUsers: dailyNewUsers[d], tracked: cids.length };
+    for (const k of RETENTION_KEYS) {
+      const target = addDays(d, k);
+      if (target > todayStr || !cids.length) { row[`d${k}`] = null; continue; }
+      const active = activeByDate[target] || new Set();
+      row[`d${k}`] = cids.filter((c) => active.has(c)).length / cids.length;
+    }
+    return row;
+  });
+
+  // ---- 首页 / 后台 UV PV ----
+  const pageStat = (page) => {
+    const today = dateList[dateList.length - 1];
+    let uvToday = new Set(), pvToday = 0, uvTotal = new Set(), pvTotal = 0;
+    for (const e of events) {
+      if (e.event !== 'page_view' || e.page !== page) continue;
+      const d = localDate(e.created_at);
+      uvTotal.add(e.client_id); pvTotal++;
+      if (d === today) { uvToday.add(e.client_id); pvToday++; }
+    }
+    return { uvToday: uvToday.size, pvToday, uvTotal: uvTotal.size, pvTotal };
+  };
+
+  ok(res, {
+    range: { from: dateList[0], to: todayStr, days },
+    dailyNewUsers: dateList.map((d) => ({ date: d, count: dailyNewUsers[d] })),
+    dailyFullView: dateList.map((d) => ({ date: d, count: dailyFullView[d].size })),
+    retention,
+    duration: { daily: dailyDuration, overallAvgMinutes: personDays ? Math.round((totalMin / personDays) * 10) / 10 : 0 },
+    pages: { home: pageStat('home'), admin: pageStat('admin') },
+  });
+});
+
+
 
 async function seedIfEmpty() {
   const existing = await sbCount('profiles');

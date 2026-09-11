@@ -1,0 +1,9 @@
+# 运行时数据不进仓库（服务器首次启动自动生成种子数据与演示账号）
+data/db.json
+data/uploads/
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+.trae/
+tools/

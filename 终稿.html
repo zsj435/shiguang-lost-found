@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="fv1cReepRNjsTT8wjG7AIE">
+<head data-page-node-id="uXfnTQAa4KdbAMfCLpdaJs">
+<meta charset="UTF-8" data-page-node-id="NDQoECsSk7Ktu60hvZ7d8h">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="wM68nazVgrtJT4JQz4PmOQ">
+<title>拾光 · 校园失物招领</title>
+<link rel="icon" href="data:," data-page-node-id="hrUH1HKjk9ouSSe3xCAnRL">
+<link rel="stylesheet" href="fonts/noto-serif-sc.css">
+<link rel="stylesheet" href="fonts/ma-shan-zheng.css">
+<style>
+/* ============================================================
+   拾光 · 终稿 —— 离线预览版全量功能 × 落地页公告板海报风 × 真实后端
+   拾光橙 #FF7A45 = 寻物 | 安心绿 #12B886 = 招领 | 奶油纸 #FDF7F1 | 墨 #2B2118
+   ============================================================ */
+:root{
+  --orange:#FF7A45; --green:#12B886; --paper:#FDF7F1; --ink:#2B2118;
+  --ink-60:rgba(43,33,24,.6); --ink-12:rgba(43,33,24,.12);
+  --card:#FFFDF9; --shadow:5px 5px 0 rgba(43,33,24,.92);
+  --shadow-sm:3px 3px 0 rgba(43,33,24,.92);
+  --serif:'Noto Serif SC',serif; --sans:'Noto Sans SC',system-ui,sans-serif; --hand:'Ma Shan Zheng',cursive;
+  --red:#C0392B; --gold:#E8A33D;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);min-height:100vh;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:var(--sans);font-size:15px;color:var(--ink);background:var(--card);
+  border:2px solid var(--ink);padding:10px 12px;border-radius:6px;width:100%;outline:none}
+input:focus,textarea:focus,select:focus{box-shadow:3px 3px 0 var(--ink-12)}
+textarea{resize:vertical;min-height:96px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.serif{font-family:var(--serif)}
+.hand{font-family:var(--hand);font-weight:400}
+
+/* ---------- 顶部导航 ---------- */
+header.top{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:3px solid var(--ink);
+  box-shadow:0 3px 0 rgba(43,33,24,.08)}
+.top-in{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:22px}
+.logo{font-family:var(--serif);font-weight:900;font-size:22px;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+.logo .stamp{width:34px;height:34px;border:3px solid var(--orange);border-radius:50%;display:grid;place-items:center;
+  font-family:var(--hand);font-size:17px;color:var(--orange);transform:rotate(-8deg);background:var(--card)}
+nav.main{display:flex;gap:4px;margin-left:8px;flex:1;align-items:center}
+nav.main a{padding:7px 13px;border-radius:6px;font-weight:500;font-size:14.5px;border:2px solid transparent;position:relative}
+nav.main a:hover{background:var(--ink-12)}
+nav.main a.on{border-color:var(--ink);background:var(--card);box-shadow:2px 2px 0 var(--ink)}
+.badge-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;background:var(--red);color:#fff;
+  border-radius:9px;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 4px;border:1.5px solid var(--paper)}
+.top-right{display:flex;align-items:center;gap:10px}
+.avatar{width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);background:var(--orange);
+  color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;box-shadow:2px 2px 0 var(--ink)}
+.who{font-size:13px;color:var(--ink-60);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role-tag{font-size:11px;border:1.5px solid var(--ink);border-radius:4px;padding:1px 5px;background:#FFE8DD;font-weight:700}
+
+/* ---------- 按钮 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700;font-size:15px;
+  padding:10px 22px;border:2.5px solid var(--ink);border-radius:8px;background:var(--card);
+  box-shadow:var(--shadow-sm);transition:transform .12s,box-shadow .12s;color:var(--ink)}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 rgba(43,33,24,.92)}
+.btn:active{transform:translate(1px,1px);box-shadow:2px 2px 0 rgba(43,33,24,.92)}
+.btn.orange{background:var(--orange);color:#fff}
+.btn.green{background:var(--green);color:#fff}
+.btn.ghost{box-shadow:none;border-style:dashed;background:transparent}
+.btn.sm{padding:6px 14px;font-size:13.5px;border-width:2px}
+.btn.danger{background:#fff;color:var(--red);border-color:var(--red);box-shadow:3px 3px 0 rgba(192,57,43,.85)}
+.btn:disabled{opacity:.5;pointer-events:none}
+
+/* ---------- 大厅 ---------- */
+.hero{padding:44px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(28px,4.6vw,44px);line-height:1.15}
+.lp-hero h1 em,.hero h1 em{font-style:normal;color:var(--orange);position:relative;white-space:nowrap}
+.lp-hero h1 em svg,.hero h1 em svg{position:absolute;left:-6%;bottom:-10px;width:112%;height:.42em}
+.hero p{margin-top:10px;color:var(--ink-60);font-size:15px}
+.seal{font-family:var(--hand);font-size:20px;color:var(--ink-60);border:2.5px dashed var(--ink-12);
+  border-radius:50%;width:92px;height:92px;display:grid;place-items:center;text-align:center;
+  transform:rotate(10deg);line-height:1.25;flex:none}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 6px}
+.tabs{display:flex;border:2.5px solid var(--ink);border-radius:9px;overflow:hidden;background:var(--card);box-shadow:var(--shadow-sm)}
+.tabs button{padding:9px 18px;font-weight:700;font-size:14.5px;border-right:2px solid var(--ink)}
+.tabs button:last-child{border-right:none}
+.tabs button.on{background:var(--ink);color:var(--paper)}
+.tabs button.on.t-lost{background:var(--orange)}
+.tabs button.on.t-found{background:var(--green)}
+.search{flex:1;min-width:180px;max-width:340px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.chip{font-size:13px;font-weight:500;border:2px solid var(--ink);border-radius:999px;padding:4px 14px;
+  background:var(--card);transition:.12s}
+.chip:hover{background:#FFF3E6}
+.chip.on{background:var(--ink);color:var(--paper);box-shadow:2px 2px 0 rgba(43,33,24,.35)}
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:26px;padding:22px 0 40px}
+.card{position:relative;background:var(--card);border:2.5px solid var(--ink);border-radius:10px;
+  padding:16px 18px 13px;box-shadow:var(--shadow);transition:transform .15s;cursor:pointer}
+.card:hover{transform:translateY(-4px) rotate(0deg) !important}
+.card.tape::before{content:"";position:absolute;top:-12px;left:50%;transform:translateX(-50%) rotate(-3deg);
+  width:86px;height:22px;background:rgba(255,214,140,.75);border-left:1px dashed rgba(43,33,24,.25);
+  border-right:1px dashed rgba(43,33,24,.25);z-index:2}
+.card.lost{transform:rotate(-1.1deg)}.card.found{transform:rotate(.9deg)}
+.card .kicker{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:12.5px;letter-spacing:2px;
+  padding:3px 10px;border-radius:4px;color:#fff;margin-bottom:10px}
+.card.lost .kicker{background:var(--orange)}.card.found .kicker{background:var(--green)}
+.card .kicker.done{background:var(--ink)}
+.card .thumb{width:100%;height:150px;object-fit:cover;border:2px solid var(--ink);border-radius:8px;margin-bottom:10px;display:block}
+.card h3{font-family:var(--serif);font-size:18.5px;font-weight:900;line-height:1.35;margin-bottom:8px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .desc{font-size:13.5px;color:var(--ink-60);line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;margin-bottom:12px;min-height:44px}
+.card .meta{display:flex;gap:12px;font-size:12.5px;color:var(--ink-60);flex-wrap:wrap}
+.card .foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;
+  border-top:1.5px dashed var(--ink-12);font-size:13px}
+.card .foot .cnt{color:var(--ink-60);display:flex;gap:12px}
+.badge-cat{font-size:11.5px;border:1.5px solid var(--ink);border-radius:4px;padding:1px 7px;background:#FFF3E6}
+.state-tag{font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 7px;color:#fff}
+.state-tag.open{background:var(--gold)}
+.state-tag.resolved{background:var(--ink-60)}
+.empty{text-align:center;padding:70px 0;color:var(--ink-60)}
+.empty .hand{font-size:26px;color:var(--ink);opacity:.55;display:block;margin-bottom:8px}
+.load-more{text-align:center;padding-bottom:70px}
+.map-hint{border:2.5px dashed var(--ink);border-radius:12px;background:var(--card);padding:60px 20px;
+  text-align:center;margin:20px 0 70px;box-shadow:var(--shadow-sm)}
+.map-hint .hand{font-size:24px;display:block;margin-bottom:8px;color:var(--ink);opacity:.6}
+
+/* ---------- 表单页 ---------- */
+.form-page{max-width:660px;margin:40px auto 80px}
+.paper-card{background:var(--card);border:2.5px solid var(--ink);border-radius:12px;padding:30px 30px 26px;
+  box-shadow:var(--shadow);position:relative}
+.paper-card.tape::before{content:"";position:absolute;top:-13px;left:40px;transform:rotate(-5deg);width:80px;height:24px;
+  background:rgba(255,214,140,.75);border-left:1px dashed rgba(43,33,24,.25);border-right:1px dashed rgba(43,33,24,.25)}
+.form-page h2{font-family:var(--serif);font-weight:900;font-size:26px;margin-bottom:6px}
+.form-page .sub{color:var(--ink-60);font-size:14px;margin-bottom:22px}
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:700;font-size:13.5px;margin-bottom:6px}
+.field .hint{font-size:12px;color:var(--ink-60);margin-top:5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2.5px solid var(--ink);border-radius:9px;
+  overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-sm)}
+.type-toggle button{padding:12px;font-weight:900;font-family:var(--serif);font-size:16px;background:var(--card)}
+.type-toggle button.on-lost{background:var(--orange);color:#fff}
+.type-toggle button.on-found{background:var(--green);color:#fff}
+.form-err{color:var(--red);font-size:13.5px;margin:4px 0 12px;min-height:18px;font-weight:500}
+.demo-tip{margin-top:18px;border-top:1.5px dashed var(--ink-12);padding-top:14px;font-size:12.5px;color:var(--ink-60);line-height:1.8}
+.demo-tip b{color:var(--ink)}
+.demo-tip code{background:#FFF3E6;border:1px solid var(--ink-12);border-radius:4px;padding:1px 6px;cursor:pointer}
+/* 图片上传 */
+.up-grid{display:flex;gap:10px;flex-wrap:wrap}
+.up-box{width:96px;height:96px;border:2px dashed var(--ink);border-radius:8px;display:grid;place-items:center;
+  color:var(--ink-60);font-size:24px;background:var(--paper);cursor:pointer;position:relative;overflow:hidden}
+.up-box:hover{background:#FFF3E6}
+.up-item{width:96px;height:96px;border:2px solid var(--ink);border-radius:8px;position:relative;box-shadow:var(--shadow-sm)}
+.up-item img{width:100%;height:100%;object-fit:cover;display:block}
+.up-item .rm{position:absolute;top:-9px;right:-9px;width:22px;height:22px;border-radius:50%;background:var(--red);
+  color:#fff;border:2px solid var(--paper);font-size:12px;line-height:1;display:grid;place-items:center}
+.contact-row{display:grid;grid-template-columns:130px 1fr;gap:10px}
+/* 遮罩弹层 */
+.mask{position:fixed;inset:0;background:rgba(43,33,24,.45);z-index:80;display:grid;place-items:center;padding:20px}
+.mask .box{background:var(--card);border:2.5px solid var(--ink);border-radius:12px;box-shadow:var(--shadow);
+  max-width:420px;width:100%;padding:26px}
+.mask h3{font-family:var(--serif);font-weight:900;font-size:19px;margin-bottom:10px}
+.mask p{font-size:14px;line-height:1.7;color:var(--ink-60);margin-bottom:18px}
+.mask .row{display:flex;gap:10px;justify-content:flex-end}
+
+/* ---------- 详情 ---------- */
+.detail{max-width:760px;margin:40px auto 80px}
+.back{display:inline-block;margin-bottom:18px;font-size:14px;color:var(--ink-60)}
+.back:hover{color:var(--ink)}
+.d-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.d-title{font-family:var(--serif);font-weight:900;font-size:clamp(22px,3.6vw,30px);line-height:1.3;margin-bottom:14px}
+.d-meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--ink-60);font-size:13.5px;padding-bottom:16px;
+  border-bottom:2px dashed var(--ink-12);margin-bottom:18px}
+.d-body{font-size:15.5px;line-height:1.9;white-space:pre-wrap;margin-bottom:20px}
+.d-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.d-imgs img{width:100%;aspect-ratio:4/3;object-fit:cover;border:2px solid var(--ink);border-radius:8px;
+  box-shadow:var(--shadow-sm);cursor:zoom-in}
+.contact-card{display:flex;align-items:center;gap:14px;background:#FFF9F0;border:2.5px solid var(--ink);
+  border-radius:10px;padding:14px 18px;margin-bottom:20px;flex-wrap:wrap;box-shadow:var(--shadow-sm)}
+.contact-card .ic{width:44px;height:44px;border-radius:50%;border:2.5px solid var(--ink);display:grid;place-items:center;
+  font-size:20px;background:var(--paper);flex:none}
+.contact-card .val{font-weight:700;font-size:16.5px}
+.contact-card .sub{font-size:12px;color:var(--ink-60);margin-top:2px}
+.contact-card .ops{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.d-actions{display:flex;gap:12px;flex-wrap:wrap;padding-top:16px;border-top:2px dashed var(--ink-12)}
+.section-t{font-family:var(--serif);font-weight:900;font-size:18px;margin:34px 0 14px;display:flex;align-items:center;gap:10px}
+.section-t::after{content:"";flex:1;border-top:2px dashed var(--ink-12)}
+.cmt{background:var(--card);border:2px solid var(--ink);border-radius:8px;padding:12px 16px;margin-bottom:12px;
+  box-shadow:var(--shadow-sm)}
+.cmt .who-line{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;gap:10px}
+.cmt .who-line b{font-size:14px}
+.cmt p{font-size:14.5px;line-height:1.7}
+.cmt .reply-tag{color:var(--orange);font-weight:700;font-size:12.5px;margin-right:4px}
+.cmt .ops button{color:var(--red);font-size:12.5px;font-weight:700}
+.claim-box{background:#FFF9F0;border:2.5px solid var(--ink);border-radius:10px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.claim-box .line{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.claim-box .ans{font-size:14px;line-height:1.7;margin:8px 0 0;color:var(--ink)}
+.claim-state{font-size:12px;font-weight:900;padding:2px 10px;border-radius:4px;color:#fff}
+.claim-state.pending{background:var(--gold)}.claim-state.approved{background:var(--green)}
+.claim-state.rejected{background:var(--red)}.claim-state.closed{background:var(--ink-60)}
+.sim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+
+/* ---------- 匹配成功页 ---------- */
+.matched-hero{text-align:center;padding:46px 0 10px}
+.matched-hero .ok{width:76px;height:76px;border:3px solid var(--green);border-radius:50%;display:grid;place-items:center;
+  margin:0 auto 16px;font-size:34px;color:var(--green);transform:rotate(-6deg);background:var(--card);box-shadow:var(--shadow-sm)}
+.matched-hero h2{font-family:var(--serif);font-weight:900;font-size:28px;margin-bottom:8px}
+
+/* ---------- 我的 / 管理 / 通知 ---------- */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin:24px 0 30px}
+.stat{background:var(--card);border:2.5px solid var(--ink);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+.stat:nth-child(odd){transform:rotate(-.7deg)}.stat:nth-child(even){transform:rotate(.7deg)}
+.stat .num{font-family:var(--serif);font-weight:900;font-size:30px}
+.stat .lbl{font-size:12.5px;color:var(--ink-60);margin-top:2px}
+.stat.o .num{color:var(--orange)}.stat.g .num{color:var(--green)}
+table.tbl{width:100%;border-collapse:collapse;background:var(--card);border:2.5px solid var(--ink);
+  border-radius:10px;overflow:hidden;box-shadow:var(--shadow-sm);font-size:13.5px}
+.tbl th{background:var(--ink);color:var(--paper);text-align:left;padding:10px 14px;font-size:12.5px;letter-spacing:1px}
+.tbl td{padding:11px 14px;border-top:1.5px solid var(--ink-12);vertical-align:middle}
+.tbl .ops{display:flex;gap:8px;flex-wrap:wrap}
+.mini{font-size:12px;font-weight:700;border:1.5px solid var(--ink);border-radius:5px;padding:3px 9px;background:var(--paper)}
+.mini:hover{background:#FFF3E6}
+.mini.warn{border-color:var(--red);color:var(--red)}
+.mini.ok{border-color:var(--green);color:var(--green)}
+.tag-banned{color:var(--red);font-weight:700}.tag-admin{color:var(--orange);font-weight:700}
+.notif{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:2px solid var(--ink);
+  border-radius:8px;padding:12px 16px;margin-bottom:10px;box-shadow:var(--shadow-sm);font-size:14px;line-height:1.6}
+.notif.unread{background:#FFF3E6}
+.notif .dot{width:9px;height:9px;border-radius:50%;background:var(--orange);margin-top:7px;flex:none}
+.notif.read .dot{background:var(--ink-12)}
+.notif time{color:var(--ink-60);font-size:12px}
+.profile-head{display:flex;align-items:center;gap:16px;padding:34px 0 6px;flex-wrap:wrap}
+.profile-head .avatar{width:64px;height:64px;font-size:26px}
+.profile-head h2{font-family:var(--serif);font-weight:900;font-size:26px;display:flex;align-items:center;gap:8px}
+.cert{font-size:11px;color:var(--green);border:1.5px solid var(--green);border-radius:4px;padding:1px 6px;font-weight:700}
+
+/* ---------- Toast ---------- */
+#toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%) translateY(20px);z-index:99;
+  background:var(--ink);color:var(--paper);padding:11px 22px;border-radius:8px;font-size:14px;font-weight:500;
+  opacity:0;pointer-events:none;transition:.25s;box-shadow:var(--shadow-sm);max-width:80vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{border-top:3px solid var(--ink);padding:22px 0 30px;margin-top:20px;text-align:center;
+  color:var(--ink-60);font-size:13px}
+footer .hand{font-size:19px;color:var(--ink);opacity:.6}
+@media (max-width:640px){nav.main a{padding:6px 8px;font-size:13px;white-space:nowrap}.who{display:none}.seal{display:none}
+  .grid2{grid-template-columns:1fr}.contact-row{grid-template-columns:1fr}.d-imgs{grid-template-columns:1fr 1fr}}
+
+/* ============================================================
+   展示级增强 ——「活的公告板」（纯装饰层，功能零改动）
+   ============================================================ */
+:root{
+  --ease-out-quart:cubic-bezier(.25,1,.5,1);
+  --ease-out-expo:cubic-bezier(.16,1,.3,1);
+}
+/* —— 报头：三色语义条 + 眉线 —— */
+header.top{border-top:6px solid var(--ink)}
+header.top::before{content:"";position:absolute;top:-6px;left:0;right:0;height:6px;
+  background:linear-gradient(90deg,var(--orange) 0 34%,var(--ink) 34% 67%,var(--green) 67% 100%)}
+.masthead{max-width:1080px;margin:0 auto;padding:8px 20px 0;display:flex;justify-content:space-between;
+  font-size:10.5px;letter-spacing:3px;color:var(--ink-60);font-weight:700}
+.masthead b{color:var(--orange)}
+/* —— 大字报 Hero：逐字入场 + 圈注描边 + 盖章 —— */
+.hero{padding:52px 0 24px}
+.lp-hero h1,.hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(38px,6.2vw,66px);line-height:1.08;letter-spacing:.02em}
+.lp-hero h1 .ch,.hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(5deg);
+  animation:chIn .7s var(--ease-out-expo) forwards;animation-delay:calc(var(--i)*55ms + 60ms)}
+@keyframes chIn{to{opacity:1;transform:none}}
+.lp-hero h1 em svg path,.hero h1 em svg path{stroke-dasharray:150;stroke-dashoffset:150;
+  animation:draw .8s var(--ease-out-quart) 1s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero p{animation:riseIn .6s var(--ease-out-quart) .55s both}
+.toolbar{animation:riseIn .6s var(--ease-out-quart) .68s both}
+.chips{animation:riseIn .6s var(--ease-out-quart) .76s both}
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.seal{animation:stampIn .55s var(--ease-out-expo) .85s both}
+@keyframes stampIn{0%{opacity:0;transform:rotate(10deg) scale(2.4)}
+  62%{opacity:1;transform:rotate(10deg) scale(.94)}100%{opacity:1;transform:rotate(10deg) scale(1)}}
+.logo:hover .stamp{animation:stampTwist .5s var(--ease-out-expo)}
+@keyframes stampTwist{50%{transform:rotate(8deg) scale(1.15)}}
+/* —— 启事跑马灯 —— */
+.ticker{display:flex;align-items:stretch;border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);
+  background:var(--ink);color:var(--paper);margin:8px 0 2px;overflow:hidden;
+  animation:riseIn .6s var(--ease-out-quart) .4s both}
+.ticker .tk-label{flex:none;display:flex;align-items:center;padding:9px 16px;background:var(--orange);
+  color:#fff;font-weight:900;font-size:12.5px;letter-spacing:4px;border-right:2.5px solid var(--ink)}
+.ticker .tk-view{flex:1;overflow:hidden;display:flex;align-items:center;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.ticker .tk-track{display:inline-flex;white-space:nowrap;will-change:transform;
+  animation:tkMove 30s linear infinite}
+.ticker:hover .tk-track{animation-play-state:paused}
+@keyframes tkMove{to{transform:translateX(-50%)}}
+.tk-item{display:inline-flex;align-items:center;gap:9px;padding:9px 28px;font-size:13.5px;font-weight:500}
+.tk-item i{width:8px;height:8px;border-radius:50%;flex:none;box-shadow:0 0 0 2.5px rgba(253,247,241,.22)}
+.tk-item.lost i{background:var(--orange)}
+.tk-item.found i{background:var(--green)}
+/* —— 卡片 hover 与统一缓动 —— */
+.btn{transition:transform .18s var(--ease-out-quart),box-shadow .18s var(--ease-out-quart)}
+.card{transition:transform .25s var(--ease-out-quart),box-shadow .25s var(--ease-out-quart)}
+.card:hover{box-shadow:8px 8px 0 rgba(43,33,24,.92)}
+.chip,.mini{transition:transform .15s var(--ease-out-quart),background .15s var(--ease-out-quart)}
+.chip:hover{transform:translateY(-2px)}
+/* —— 页面切换入场（CSS-only：路由重渲染后自动播放） —— */
+#app > .wrap{animation:pageIn .42s var(--ease-out-quart) both}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* —— footer 胶带收尾 —— */
+footer{position:relative}
+footer::before{content:"";position:absolute;top:-8px;left:50%;transform:translateX(-50%) rotate(-1.2deg);
+  width:130px;height:16px;background:rgba(255,214,140,.8);
+  border-left:1px dashed rgba(43,33,24,.25);border-right:1px dashed rgba(43,33,24,.25)}
+/* —— 主题图标（内联 SVG，替代 emoji，跨平台一致） —— */
+.ic{display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.ic svg{width:1.05em;height:1.05em;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
+.state-tag .ic svg,.badge-cat .ic svg{stroke-width:2.2}
+/* —— 无图占位：主题化「凭描述辨认」 —— */
+.noimg{width:100%;height:150px;border:2px dashed var(--ink-12);border-radius:8px;margin-bottom:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  background:repeating-linear-gradient(-45deg,transparent 0 12px,rgba(43,33,24,.025) 12px 24px);color:var(--ink-60)}
+.noimg .ic svg{width:30px;height:30px;stroke-width:1.6;opacity:.5}
+.noimg span{font-family:var(--hand);font-size:17px;color:var(--ink);opacity:.55}
+.noimg small{font-size:11px;letter-spacing:1px}
+.detail .noimg{height:180px}
+/* —— 骨架屏：加载态 —— */
+.sk-card{background:var(--card);border:2.5px solid var(--ink);border-radius:10px;padding:16px 18px;
+  box-shadow:var(--shadow);position:relative;overflow:hidden}
+.sk-card.lost{transform:rotate(-1.1deg)}.sk-card.found{transform:rotate(.9deg)}
+.sk-card.tape::before{content:"";position:absolute;top:-12px;left:50%;transform:translateX(-50%) rotate(-3deg);
+  width:86px;height:22px;background:rgba(255,214,140,.75);border-left:1px dashed rgba(43,33,24,.25);
+  border-right:1px dashed rgba(43,33,24,.25);z-index:2}
+.sk-line{height:13px;border-radius:4px;margin-bottom:10px;
+  background:linear-gradient(90deg,var(--ink-12) 25%,rgba(43,33,24,.07) 45%,var(--ink-12) 65%);
+  background-size:200% 100%;animation:sk 1.1s ease-in-out infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.sk-line.t{height:18px;width:72%}.sk-line.d{width:92%}.sk-line.d2{width:64%}
+.sk-line.m{width:46%;margin-bottom:0;margin-top:14px}
+/* —— Hero 手写水印 —— */
+.hero{position:relative}
+.hero::before{content:"拾光";position:absolute;right:-14px;top:-38px;font-family:var(--hand);
+  font-size:clamp(110px,16vw,190px);line-height:1;color:transparent;
+  -webkit-text-stroke:2px rgba(43,33,24,.055);pointer-events:none;user-select:none;z-index:0;
+  transform:rotate(-4deg)}
+.hero > *{position:relative;z-index:1}
+
+/* —— 首页叙事区块（公告板编辑海报版式） —— */
+.lp-hero{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:center;
+  padding:60px 0 36px;position:relative}
+.lp-hero::before{content:"拾光";position:absolute;right:-14px;top:-30px;font-family:var(--hand);
+  font-size:clamp(110px,15vw,180px);line-height:1;color:transparent;
+  -webkit-text-stroke:2px rgba(43,33,24,.055);pointer-events:none;user-select:none;z-index:0;
+  transform:rotate(-4deg)}
+.lp-hero > *{position:relative;z-index:1}
+.lp-hero h1{font-size:clamp(34px,5vw,58px);line-height:1.14}
+.lp-hero .lp-lead{margin-top:16px;color:var(--ink-60);font-size:15px;max-width:34em}
+.lp-cta{display:flex;gap:14px;margin-top:26px;flex-wrap:wrap}
+.lp-cta .dot,.lp-final .row .dot{width:9px;height:9px;border-radius:50%;background:#fff;flex:none}
+.lp-note{margin-top:16px;font-size:12.5px;color:var(--ink-60);letter-spacing:.5px}
+.lp-posters{position:relative;height:320px;pointer-events:none}
+.lp-posters .poster{position:absolute;width:190px;background:var(--card);border:2.5px solid var(--ink);
+  border-radius:9px;box-shadow:var(--shadow);padding:14px 14px 12px}
+.lp-posters .poster .pt{display:inline-block;font-size:11px;font-weight:900;letter-spacing:2px;color:#fff;
+  padding:2px 8px;border-radius:3px;margin-bottom:8px}
+.lp-posters .poster.lost{left:4px;top:36px;transform:rotate(-6deg);animation:posterIn .7s var(--ease-out-expo) .5s both}
+.lp-posters .poster.found{right:8px;top:110px;transform:rotate(4deg);animation:posterIn .7s var(--ease-out-expo) .68s both}
+.lp-posters .poster.lost .pt{background:var(--orange)}
+.lp-posters .poster.found .pt{background:var(--green)}
+.lp-posters .poster h4{font-family:var(--serif);font-weight:900;font-size:15px;line-height:1.45}
+.lp-posters .poster p{font-size:11.5px;color:var(--ink-60);margin-top:6px;line-height:1.6}
+.lp-posters .poster .pm{margin-top:9px;padding-top:8px;border-top:1.5px dashed var(--ink-12);
+  font-size:11px;color:var(--ink-60)}
+@keyframes posterIn{from{opacity:0;transform:translateY(26px) rotate(0)}to{opacity:1}}
+/* 三步流程 */
+.lp-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:38px;padding:52px 0 58px;border-top:2.5px solid var(--ink)}
+.lp-step .num{font-family:var(--serif);font-weight:900;font-size:78px;line-height:.9;
+  color:transparent;-webkit-text-stroke:2.5px var(--ink);opacity:.28}
+.lp-step:nth-child(2) .num{-webkit-text-stroke-color:var(--orange);opacity:.42}
+.lp-step:nth-child(3) .num{-webkit-text-stroke-color:var(--green);opacity:.42}
+.lp-step h3{font-family:var(--serif);font-weight:900;font-size:19px;margin:14px 0 8px}
+.lp-step h3 em{font-style:normal;color:var(--orange)}
+.lp-step:nth-child(3) h3 em{color:var(--green)}
+.lp-step p{font-size:13.5px;line-height:1.8;color:var(--ink-60)}
+/* 橙绿对撞双入口 */
+.lp-clash{display:grid;grid-template-columns:1fr 1fr;border:3px solid var(--ink);box-shadow:var(--shadow);
+  position:relative;margin:6px 0 62px}
+.lp-clash .half{padding:46px 38px 42px;color:#fff;position:relative}
+.lp-clash .lost-half{background:var(--orange)}
+.lp-clash .found-half{background:var(--green)}
+.lp-clash .half .tag{display:inline-block;font-size:11.5px;font-weight:900;letter-spacing:2px;
+  border:1.5px solid rgba(255,255,255,.75);border-radius:4px;padding:2px 9px;margin-bottom:14px}
+.lp-clash .half h3{font-family:var(--serif);font-weight:900;font-size:clamp(20px,2.6vw,27px);line-height:1.4;margin-bottom:10px}
+.lp-clash .half p{font-size:13.5px;line-height:1.75;opacity:.92;margin-bottom:20px}
+.lp-clash .half .btn{background:var(--card);color:var(--ink);border-color:var(--ink)}
+.lp-clash .mid-seal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-8deg);
+  width:74px;height:74px;border-radius:50%;background:var(--card);border:3px solid var(--ink);
+  display:grid;place-items:center;font-family:var(--hand);font-size:34px;color:var(--orange);
+  box-shadow:var(--shadow-sm);z-index:2}
+/* 公告板墙标题 */
+.lp-wall-head{padding:6px 0 4px}
+.lp-wall-head h2{font-family:var(--serif);font-weight:900;font-size:clamp(24px,3.4vw,34px)}
+.lp-wall-head h2 em{font-style:normal;color:var(--orange);position:relative;white-space:nowrap}
+.lp-wall-head p{color:var(--ink-60);font-size:14px;margin-top:8px}
+/* 归还故事 */
+.lp-story{max-width:720px;margin:8px auto 70px;text-align:center;padding:0 10px}
+.lp-story h2{font-family:var(--serif);font-weight:900;font-size:clamp(22px,3vw,30px);margin-bottom:26px}
+.lp-story h2 em{font-style:normal;color:var(--green)}
+.lp-story blockquote{font-size:15.5px;line-height:2;color:var(--ink);position:relative;padding:0 8px}
+.lp-story blockquote::before{content:"「";font-family:var(--serif);font-weight:900;font-size:30px;
+  color:var(--orange);display:block;margin-bottom:6px}
+.lp-story .sig{margin-top:18px;font-family:var(--hand);font-size:19px;color:var(--ink-60)}
+.lp-story .link{display:inline-block;margin-top:20px;font-size:13.5px;color:var(--ink-60);
+  text-decoration:underline;text-underline-offset:3px}
+.lp-story .link:hover{color:var(--ink)}
+/* 终章 CTA */
+.lp-final{background:var(--ink);color:var(--paper);text-align:center;padding:78px 20px 82px;
+  position:relative;overflow:hidden}
+.lp-final::before{content:"拾光";position:absolute;left:-16px;bottom:-46px;font-family:var(--hand);
+  font-size:200px;line-height:1;color:transparent;-webkit-text-stroke:2px rgba(253,247,241,.07);
+  pointer-events:none;user-select:none;transform:rotate(3deg)}
+.lp-final h2{font-family:var(--serif);font-weight:900;font-size:clamp(26px,4vw,42px);line-height:1.3;
+  position:relative;z-index:1}
+.lp-final h2 em{font-style:normal;color:var(--orange)}
+.lp-final .row{display:flex;gap:14px;justify-content:center;margin-top:30px;flex-wrap:wrap;position:relative;z-index:1}
+.lp-final .sub{margin-top:18px;font-size:12.5px;color:rgba(253,247,241,.55);letter-spacing:2px;position:relative;z-index:1}
+/* 滚动显现 */
+.rise{opacity:0;transform:translateY(26px)}
+.rise.in{opacity:1;transform:none;transition:opacity .7s var(--ease-out-quart),transform .7s var(--ease-out-quart)}
+@media (prefers-reduced-motion:reduce){.rise{opacity:1;transform:none}}
+@media (max-width:860px){
+  .lp-hero{grid-template-columns:1fr;padding-top:44px}
+  .lp-posters{height:250px;max-width:420px}
+  .lp-steps{grid-template-columns:1fr;gap:26px;padding:40px 0 44px}
+  .lp-clash{grid-template-columns:1fr}
+  .lp-clash .mid-seal{left:50%;top:auto;bottom:-37px;transform:translateX(-50%) rotate(-8deg)}
+}
+
+/* —— 降级：偏好减少动效 —— */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-delay:0ms !important;
+    animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
+  .ticker .tk-track{animation:none}
+  .lp-hero h1 .ch,.hero h1 .ch{opacity:1;transform:none;animation:none}
+  .lp-hero h1 em svg path,.hero h1 em svg path{stroke-dashoffset:0;animation:none}
+}
+@media (max-width:640px){.masthead span:last-child{display:none}.ticker .tk-label{letter-spacing:2px;padding:9px 10px}}
+
+/* ============================================================
+   移动端适配 —— 手机 / 平板（功能零改动，仅排版与触控优化）
+   ============================================================ */
+@media (max-width:768px){
+  body{overflow-x:hidden}
+  .wrap{padding:0 16px}
+  /* —— 顶栏：logo+用户态一行，导航第二行横向滑动 —— */
+  .top-in{flex-wrap:wrap;gap:8px;padding:10px 16px 0}
+  nav.main{order:3;width:100%;margin-left:0;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding:0 0 9px}
+  nav.main::-webkit-scrollbar{display:none}
+  nav.main a{flex:none;white-space:nowrap}
+  .top-right{margin-left:auto}
+  .masthead{padding:7px 16px 0}
+  /* —— 首页叙事区块 —— */
+  .hero{padding:36px 0 18px}
+  .hero h1{font-size:clamp(30px,8.6vw,44px)}
+  .lp-hero{padding:34px 0 24px}
+  .lp-hero h1{font-size:clamp(30px,9vw,44px)}
+  .lp-hero .lp-lead{font-size:14px}
+  .lp-cta .btn{flex:1;justify-content:center}
+  .lp-posters{height:224px;margin-top:8px}
+  .lp-posters .poster{width:160px;padding:12px 12px 10px}
+  .lp-posters .poster.found{top:96px}
+  .lp-steps{gap:22px;padding:36px 0 40px}
+  .lp-step .num{font-size:58px}
+  .lp-clash .half{padding:30px 22px 28px}
+  .lp-clash .mid-seal{width:60px;height:60px;font-size:28px}
+  .lp-final{padding:54px 18px 58px}
+  .lp-story{margin-bottom:52px}
+  /* —— 工具条 / 筛选 —— */
+  .toolbar{gap:8px;margin:10px 0 4px}
+  .toolbar .btn.sm{margin-left:auto}
+  .search{flex:1 1 100%;max-width:none;order:9}
+  .tabs button{padding:8px 14px;font-size:13.5px}
+  .chips{margin:10px 0 2px}
+  /* —— 卡片墙：单列 —— */
+  .board{grid-template-columns:1fr;gap:24px}
+  .sim-grid{grid-template-columns:1fr}
+  .load-more{padding-bottom:50px}
+  /* —— 管理员表格：横向滑动 —— */
+  .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  /* —— 详情 / 表单 / 弹层 —— */
+  .detail{margin:24px auto 60px}
+  .form-page{margin:24px auto 60px}
+  .paper-card{padding:22px 18px 20px}
+  .d-imgs{grid-template-columns:repeat(2,1fr)}
+  .contact-card .ops{margin-left:0;width:100%}
+  .d-actions .btn{flex:1;justify-content:center}
+  .mask{padding:14px}
+  .mask .box{padding:20px 18px}
+  /* —— 我的 / 管理 —— */
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .profile-head h2{font-size:22px}
+  /* —— 通用 —— */
+  .empty{padding:48px 0}
+  .map-hint{padding:40px 16px;margin:16px 0 50px}
+  .lp-story blockquote{font-size:14.5px}
+  .hero::before,.lp-hero::before{font-size:110px;top:-26px}
+}
+@media (max-width:640px){
+  .who{display:none}
+  .seal{display:none}
+  .grid2{grid-template-columns:1fr}
+  .contact-row{grid-template-columns:1fr}
+  .lp-cta{gap:10px}
+}
+
+/* ============================================================
+   PC 首页 —— 落地页 1:1 复刻层（ld- 前缀隔离，只影响 .ld-home 容器）
+   功能区块（筛选/搜索/公告板/分页）复用旧首页结构与绑定，零改动
+   ============================================================ */
+:root{
+  --ld-ink-soft:#6B5D4F; --ld-line:rgba(43,33,24,.16);
+  --ld-orange-deep:#E85F2B; --ld-orange-soft:rgba(255,122,69,.14);
+  --ld-green-deep:#0E9C71; --ld-green-soft:rgba(18,184,134,.14);
+  --ld-mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
+  --ld-ease:cubic-bezier(.22,1,.36,1);
+}
+.ld-home section{padding:clamp(84px,11vw,150px) 0}
+.ld-home .rise{transition-delay:var(--d,0s)}
+/* —— 通用节头 —— */
+.ld-sec-kicker{display:inline-flex;align-items:center;gap:12px;
+  font:700 13px/1 var(--ld-mono);letter-spacing:.3em;color:var(--ld-ink-soft);margin-bottom:20px}
+.ld-sec-kicker::before{content:"";width:34px;height:3px;background:var(--orange)}
+.ld-home h2{font-family:var(--serif);font-weight:900;font-size:clamp(32px,4.6vw,62px);line-height:1.2;letter-spacing:.01em}
+.ld-home h2 em{font-style:normal;color:var(--ld-orange-deep)}
+.ld-home h2 em.g{color:var(--ld-green-deep)}
+.ld-sec-sub{margin-top:16px;color:var(--ld-ink-soft);font-size:clamp(15px,1.4vw,17.5px);max-width:36em}
+/* —— HERO —— */
+.ld-hero{position:relative;overflow:hidden;padding:clamp(64px,9vw,128px) 0 clamp(72px,9vw,120px)}
+.ld-hero-bg{position:absolute;right:-3%;top:-4%;z-index:0;pointer-events:none;user-select:none;
+  font-family:var(--serif);font-weight:900;font-size:clamp(220px,32vw,470px);line-height:1;
+  color:transparent;-webkit-text-stroke:2px rgba(232,95,43,.10);transform:rotate(6deg)}
+.ld-hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr .92fr;
+  gap:clamp(32px,4.5vw,56px);align-items:center}
+.ld-kicker{display:inline-flex;align-items:center;gap:10px;font:700 13px/1 var(--ld-mono);
+  letter-spacing:.28em;color:var(--ld-ink-soft);border:1.5px solid var(--ld-line);
+  border-radius:999px;padding:9px 16px;background:var(--card);margin-bottom:clamp(22px,3vw,34px)}
+.ld-kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:ld-blink 2.2s infinite}
+@keyframes ld-blink{0%,100%{opacity:1}50%{opacity:.25}}
+.ld-home .ld-hero h1{font-family:var(--serif);font-weight:900;font-size:clamp(40px,6.8vw,88px);line-height:1.14;letter-spacing:.01em}
+.ld-t-lose{display:inline-block;transform:rotate(-8deg) translateY(.05em)}
+.ld-hl{position:relative;display:inline-block;font-style:normal;color:var(--ld-orange-deep);white-space:nowrap}
+.ld-ring{position:absolute;inset:-14% -9% -18% -9%;width:118%;height:132%;overflow:visible;pointer-events:none}
+.ld-ring path{fill:none;stroke:var(--orange);stroke-width:5;stroke-linecap:round;stroke-dasharray:480;stroke-dashoffset:480}
+.ld-home .rise.in .ld-ring path{animation:ld-draw 1.1s cubic-bezier(.55,0,.25,1) .55s forwards}
+@keyframes ld-draw{to{stroke-dashoffset:0}}
+.ld-hero-sub{margin-top:clamp(20px,2.6vw,30px);max-width:34em;font-size:clamp(16px,1.5vw,19px);color:var(--ld-ink-soft)}
+.ld-hero-sub b{color:var(--ld-orange-deep);font-weight:700}
+.ld-hero-sub i.b{color:var(--ld-green-deep);font-style:normal;font-weight:700}
+.ld-hero-cta{display:flex;flex-wrap:wrap;gap:16px;margin-top:clamp(28px,3.4vw,42px)}
+.ld-hero-meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:clamp(22px,2.6vw,30px);
+  font:500 13px/1.6 var(--sans);color:var(--ld-ink-soft)}
+.ld-hero-meta span{display:inline-flex;align-items:center;gap:7px}
+.ld-hero-meta svg{width:14px;height:14px;stroke:var(--ld-green-deep);fill:none;stroke-width:3;
+  stroke-linecap:round;stroke-linejoin:round}
+.ld-home .ld-hero-cta .btn,.ld-home .ld-panel .btn,.ld-home .ld-finale-cta .btn{
+  font:700 16px/1 var(--sans);padding:15px 27px;border-radius:8px}
+.ld-home .ld-hero-cta .btn svg,.ld-home .ld-panel .btn svg{width:18px;height:18px;
+  stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* —— HERO 海报舞台 —— */
+.ld-stage{position:relative;min-height:540px}
+.ld-poster{position:absolute;width:265px;border:2px solid var(--ink);border-radius:6px;
+  background:var(--card);box-shadow:9px 9px 0 rgba(43,33,24,.88);transition:box-shadow .3s var(--ld-ease)}
+.ld-poster:hover{box-shadow:12px 13px 0 rgba(43,33,24,.88)}
+.ld-poster .ld-bob{animation:ld-bob var(--bt,5.5s) ease-in-out var(--bd,0s) infinite alternate;position:relative}
+@keyframes ld-bob{from{transform:translateY(0)}to{transform:translateY(-11px)}}
+.ld-poster.a{--r:-4deg;left:0;top:6px;transform:rotate(var(--r));z-index:2}
+.ld-poster.b{--r:2.6deg;right:0;top:196px;transform:rotate(var(--r));z-index:3}
+.ld-phead{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;
+  border-bottom:2px solid var(--ink);color:var(--card);font-family:var(--serif);font-weight:900;
+  font-size:16px;letter-spacing:.34em;text-indent:.34em}
+.ld-poster.a .ld-phead{background:var(--orange)}
+.ld-poster.b .ld-phead{background:var(--green)}
+.ld-tno{font:500 10px/1 var(--ld-mono);letter-spacing:.05em;opacity:.85}
+.ld-pic{display:grid;place-items:center;padding:22px 16px 10px}
+.ld-pic svg{width:74px;height:74px;stroke:var(--ink);fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.ld-poster h3{font-family:var(--serif);font-weight:900;font-size:22px;text-align:center;letter-spacing:.04em}
+.ld-prows{padding:14px 20px 6px}
+.ld-prow{display:flex;gap:12px;padding:7px 0;border-bottom:1.5px dashed var(--ld-line);font-size:13.5px}
+.ld-prow dt{color:var(--ld-ink-soft);flex:0 0 3em;font-weight:500}
+.ld-prow dd{font-weight:600}
+.ld-hand{font-family:var(--hand);font-size:19px;text-align:center;color:var(--ld-orange-deep);
+  padding:12px 18px 18px;transform:rotate(-1.2deg)}
+.ld-poster.b .ld-hand{color:var(--ld-green-deep)}
+.ld-stage-note{position:absolute;left:8px;bottom:6px;z-index:4;font:500 11px/1.7 var(--ld-mono);
+  color:var(--ld-ink-soft);letter-spacing:.1em;border-left:3px solid var(--orange);padding-left:10px}
+/* —— 胶带 / 印章 —— */
+.ld-tape{position:absolute;top:-13px;left:50%;width:96px;height:26px;transform:translateX(-50%) rotate(-4deg);
+  background:repeating-linear-gradient(-45deg,rgba(255,122,69,.30) 0 7px,rgba(255,122,69,.20) 7px 14px);
+  box-shadow:0 1px 2px rgba(43,33,24,.12);z-index:2}
+.ld-tape.green{background:repeating-linear-gradient(-45deg,rgba(18,184,134,.30) 0 7px,rgba(18,184,134,.20) 7px 14px)}
+.ld-stamp{position:absolute;display:grid;place-items:center;text-align:center;border-radius:50%;
+  font-family:var(--serif);font-weight:900;mix-blend-mode:multiply;pointer-events:none;
+  transform:rotate(-14deg);opacity:0}
+.ld-stamp::before{content:"";position:absolute;inset:5px;border-radius:50%;border:1.5px solid currentColor;opacity:.75}
+.ld-stamp b{display:block;font-size:inherit;line-height:1.15;letter-spacing:.12em}
+.ld-stamp i{display:block;font-style:normal;font-family:var(--ld-mono);font-size:.3em;
+  letter-spacing:.28em;margin-top:4px;opacity:.85}
+.ld-stamp.orange{color:var(--ld-orange-deep)}
+.ld-stamp.green{color:var(--ld-green-deep)}
+.ld-home .rise.in .ld-stamp{animation:ld-stamp-in .45s cubic-bezier(.2,.9,.3,1.15) forwards;animation-delay:var(--sd,.55s)}
+@keyframes ld-stamp-in{0%{opacity:0;transform:rotate(-4deg) scale(2.1)}
+  70%{opacity:.95;transform:rotate(-15deg) scale(.94)}100%{opacity:.92;transform:rotate(-14deg) scale(1)}}
+.ld-poster .ld-stamp{width:96px;height:96px;font-size:19px}
+.ld-poster.a .ld-stamp{right:-16px;top:72px}
+.ld-poster.b .ld-stamp{right:-14px;top:58px}
+.ld-stamp.mini{width:66px;height:66px;font-size:14px;transform:rotate(12deg)}
+/* —— 三步 —— */
+.ld-step{display:grid;grid-template-columns:auto 1fr;gap:clamp(18px,4vw,54px);align-items:start;
+  max-width:880px;padding:clamp(30px,4vw,48px) 0;border-bottom:2px dashed var(--ld-line)}
+.ld-step:last-of-type{border-bottom:none}
+.ld-step:nth-of-type(2){margin-left:clamp(0px,7vw,110px)}
+.ld-step:nth-of-type(3){margin-left:clamp(0px,14vw,220px)}
+.ld-num{font-family:var(--serif);font-weight:900;line-height:.85;font-size:clamp(72px,9vw,138px);
+  color:transparent;-webkit-text-stroke:2px rgba(43,33,24,.4)}
+.ld-step:nth-of-type(2) .ld-num{-webkit-text-stroke-color:rgba(232,95,43,.6)}
+.ld-step:nth-of-type(3) .ld-num{-webkit-text-stroke-color:rgba(14,156,113,.6)}
+.ld-step h3{font-family:var(--serif);font-weight:900;font-size:clamp(21px,2.3vw,28px);margin-bottom:10px}
+.ld-step h3 small{font:600 12px/1 var(--ld-mono);letter-spacing:.22em;color:var(--ld-ink-soft);margin-left:14px}
+.ld-step p{color:var(--ld-ink-soft);max-width:34em;font-size:clamp(15px,1.3vw,16.5px)}
+.ld-step p b{color:var(--ink)}
+.ld-step:nth-of-type(2) p b{color:var(--ld-orange-deep)}
+.ld-step:nth-of-type(3) p b{color:var(--ld-green-deep)}
+/* —— 双入口对撞 —— */
+.ld-split{padding:0}
+.ld-split-grid{display:grid;grid-template-columns:1fr 1fr;position:relative}
+.ld-panel{padding:clamp(70px,9vw,130px) clamp(26px,6vw,90px) clamp(70px,9vw,120px)}
+.ld-panel.orange{background:linear-gradient(160deg,var(--orange) 0%,var(--ld-orange-deep) 100%)}
+.ld-panel.green{background:linear-gradient(160deg,var(--green) 0%,var(--ld-green-deep) 100%)}
+.ld-plabel{display:inline-block;font-family:var(--serif);font-weight:900;font-size:14px;
+  letter-spacing:.4em;text-indent:.4em;border:2px solid var(--ink);border-radius:999px;
+  padding:8px 18px;background:var(--card);box-shadow:3px 3px 0 var(--ink);margin-bottom:clamp(24px,3vw,38px)}
+.ld-panel h3{font-family:var(--serif);font-weight:900;font-size:clamp(28px,3.6vw,48px);line-height:1.25}
+.ld-panel ul{list-style:none;margin:clamp(20px,2.6vw,30px) 0 clamp(28px,3.4vw,42px)}
+.ld-panel li{display:flex;gap:12px;align-items:flex-start;padding:9px 0;font-size:clamp(15px,1.4vw,17px);font-weight:500}
+.ld-panel li svg{flex:0 0 auto;width:20px;height:20px;margin-top:4px;stroke:var(--ink);fill:none;
+  stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.ld-panel .btn{background:var(--card)}
+.ld-vs{position:absolute;left:50%;top:50%;z-index:5;transform:translate(-50%,-50%) rotate(-8deg);
+  width:92px;height:92px;border-radius:50%;background:var(--paper);border:2.5px solid var(--ink);
+  box-shadow:5px 5px 0 var(--ink);display:grid;place-items:center;font-family:var(--serif);
+  font-weight:900;font-size:40px;color:var(--ld-orange-deep)}
+/* —— 公告板墙头 —— */
+.ld-board-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+  gap:18px;margin-bottom:clamp(24px,3vw,40px)}
+.ld-board-date{font:500 13px/1 var(--ld-mono);color:var(--ld-ink-soft);letter-spacing:.12em}
+/* —— 归还故事 —— */
+.ld-stories{border-top:2px solid var(--ink)}
+.ld-quote{max-width:900px;padding:clamp(34px,4.4vw,56px) 0;border-bottom:2px dashed var(--ld-line)}
+.ld-quote:nth-of-type(even){margin-left:auto;text-align:right}
+.ld-quote:last-of-type{border-bottom:none}
+.ld-quote blockquote{font-family:var(--serif);font-weight:700;font-size:clamp(21px,2.8vw,34px);
+  line-height:1.55;letter-spacing:.01em}
+.ld-quote blockquote::before{content:"「";color:var(--orange);font-weight:900}
+.ld-quote blockquote::after{content:"」";color:var(--orange);font-weight:900}
+.ld-quote:nth-of-type(even) blockquote::before{color:var(--green)}
+.ld-quote:nth-of-type(even) blockquote::after{color:var(--green)}
+.ld-quote figcaption{margin-top:16px;font:500 13px/1.8 var(--ld-mono);color:var(--ld-ink-soft);letter-spacing:.08em}
+.ld-quote figcaption b{color:var(--ink)}
+/* —— 终章 —— */
+.ld-finale{background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+.ld-finale .ld-hero-bg{-webkit-text-stroke-color:rgba(253,247,241,.07);right:auto;left:-2%;top:auto;bottom:-10%}
+.ld-finale .wrap{position:relative;z-index:1;text-align:center}
+.ld-finale .ld-sec-kicker{justify-content:center;color:rgba(253,247,241,.55)}
+.ld-finale h2{font-size:clamp(38px,6vw,84px)}
+.ld-finale h2 em{color:var(--orange)}
+.ld-finale .ld-sec-sub{margin-inline:auto;color:rgba(253,247,241,.66)}
+.ld-finale-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:clamp(34px,4vw,52px)}
+.ld-finale .btn{box-shadow:6px 6px 0 rgba(253,247,241,.92)}
+.ld-finale .btn:hover{box-shadow:9px 9px 0 rgba(253,247,241,.92)}
+.ld-finale .btn:active{box-shadow:2px 2px 0 rgba(253,247,241,.92)}
+@supports not (-webkit-text-stroke:1px black){
+  .ld-hero-bg{color:rgba(255,122,69,.07)}
+  .ld-num{color:rgba(43,33,24,.16)}
+}
+/* —— 复刻层响应式（PC 窗口变窄时兜底） —— */
+@media (max-width:960px){
+  .ld-hero .wrap{grid-template-columns:1fr}
+  .ld-stage{min-height:0;display:flex;flex-wrap:wrap;gap:26px;justify-content:center;margin-top:14px}
+  .ld-poster{position:static;width:min(330px,86%)}
+  .ld-poster.a{transform:rotate(-2.2deg)}
+  .ld-poster.b{transform:rotate(2deg);top:0}
+  .ld-stage-note{position:static;width:100%;text-align:center;border-left:none;padding-left:0}
+  .ld-vs{width:72px;height:72px;font-size:30px}
+}
+@media (max-width:760px){
+  .ld-split-grid{grid-template-columns:1fr}
+  .ld-vs{display:none}
+  .ld-step:nth-of-type(2),.ld-step:nth-of-type(3){margin-left:0}
+  .ld-quote:nth-of-type(even){text-align:left}
+}
+@media (prefers-reduced-motion:reduce){
+  .ld-home .ld-stamp{opacity:.92;transform:rotate(-14deg)}
+  .ld-home .ld-ring path{stroke-dashoffset:0}
+  .ld-home .ld-bob{animation:none}
+}
+</style>
+</head>
+<body data-page-node-id="4YvxTA9qxnrMl9LlBli0qK">
+
+<header class="top" data-page-node-id="OhH24zBAOFm01FQMNZexbf">
+  <div class="masthead"><span><b>●</b> 校园失物招领平台</span><span id="mhIssue">SHIGUANG BULLETIN</span></div>
+  <div class="top-in" data-page-node-id="GoHFA0JUSxTjrFe0ZPBF8u">
+    <a class="logo" href="#/" data-page-node-id="zabw1omYoMLL5kZvITB1Ke"><span class="stamp" data-page-node-id="adaj4USDe3FClwjTj9gTC4">拾</span>拾光</a>
+    <nav class="main" id="nav" data-page-node-id="bCx5c1czWAYW46xfqhkfB9"></nav>
+    <div class="top-right" id="topRight" data-page-node-id="CZyWPgoGT0bXs49Q9PNPCL"></div>
+  </div>
+</header>
+
+<main id="app" data-page-node-id="gw29FV55TZcXF8qTtvYEbK"></main>
+<div id="toast" data-page-node-id="bGOj1rgWYnyCxFE1gTCRHV"></div>
+
+<footer data-page-node-id="U6EIusrSmajY7coGuN4n0Q">
+  <span class="hand" data-page-node-id="8q4Zjbm6Tvt2mrX85uMFuZ">丢了别慌，来拾光看看。</span><br data-page-node-id="8X1E86IkqvFMkLhZNeCqmu">
+  校园失物招领 · 拾光橙找物 / 安心绿招领
+</footer>
+
+<script>
+/* ============================================================
+ * 终稿前端 —— 全部数据来自 server.js 真实接口
+ * 信封约定：{ code, message, data, meta? }，成功 code=0
+ * 40102 = accessToken 过期（静默刷新重放）| 40101 = 未登录/无效（跳登录）
+ * ============================================================ */
+const API = (location.protocol === 'file:' ? 'http://localhost:3000' : '') + '/api';
+/** 上传等静态资源地址规范化：接口返回 /uploads/... 相对路径，
+ *  file:// 双击打开时必须补全后端地址，否则 <img> 会去 file:///uploads/ 找图 */
+const assetUrl = u => !u ? u : (/^https?:/i.test(u) ? u : (location.protocol === 'file:' ? 'http://localhost:3000' : '') + u);
+const $app = document.getElementById('app');
+const $nav = document.getElementById('nav');
+const $top = document.getElementById('topRight');
+
+/* 设备判定：与 server.js / 落地页分流保持同一规则 —— 手机/平板走旧版移动模板 */
+const IS_MOBILE = /android|iphone|ipod|mobile|harmonyos/i.test(navigator.userAgent)
+  || /iPad/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+const CATEGORIES = ['钥匙', '电子产品', '衣物', '卡类证件', '书籍', '其他'];
+
+/* ---------- 主题图标：统一手绘感线性 SVG（跨平台替代 emoji） ---------- */
+const ICONS = {
+  pin:   '<svg viewBox="0 0 24 24"><path d="M12 21s-7-5.2-7-11a7 7 0 1 1 14 0c0 5.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>',
+  clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  eye:   '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+  heart: '<svg viewBox="0 0 24 24"><path d="M12 20.3S4 15.1 4 9.6C4 6.9 6.1 5 8.5 5c1.5 0 2.8.8 3.5 2 .7-1.2 2-2 3.5-2C17.9 5 20 6.9 20 9.6c0 5.5-8 10.7-8 10.7z"/></svg>',
+  chat:  '<svg viewBox="0 0 24 24"><path d="M20 11.6a7.6 7.6 0 0 1-7.9 7.4c-1.3 0-2.6-.3-3.7-.8L4 19.5l1.3-3.5A7.1 7.1 0 0 1 4 11.6a7.6 7.6 0 0 1 8-7.4 7.6 7.6 0 0 1 8 7.4z"/></svg>',
+  photo: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17l4.5-4.5 3 3 3.5-3.5 4 4"/></svg>',
+  all:   '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></svg>',
+  key:   '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="4.2"/><path d="M11 11l9 9m-3.5-3.5 2.2-2.2m-4.4-1.2 2-2"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><rect x="7" y="3.5" width="10" height="17" rx="2.2"/><path d="M10.5 18h3"/></svg>',
+  shirt: '<svg viewBox="0 0 24 24"><path d="M8.5 4.5 5 6.5l-1.8 4L6 12l.5-1.5V19h11v-8.5L18 12l2.8-1.5-1.8-4-3.5-2a3.2 3.2 0 0 1-7 0z"/></svg>',
+  card:  '<svg viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M3.5 10h17M7 14.5h4"/></svg>',
+  book:  '<svg viewBox="0 0 24 24"><path d="M5 4.5h6.5a2 2 0 0 1 2 2V20a2.6 2.6 0 0 0-2.6-1.5H5zM19 4.5h-5.5a2 2 0 0 0-2 2V20a2.6 2.6 0 0 1 2.6-1.5H19z"/></svg>',
+  box:   '<svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/></svg>',
+};
+const icon = (n) => `<span class="ic" aria-hidden="true">${ICONS[n] || ICONS.box}</span>`;
+const CAT_ICON = { '钥匙': 'key', '电子产品': 'phone', '衣物': 'shirt', '卡类证件': 'card', '书籍': 'book', '其他': 'box' };
+const catIcon = (c) => CAT_ICON[c] || 'box';
+const LOCATIONS = ['主校区','体育馆','篮球场','第一食堂','第二食堂','操场','第三教学楼','第一教学楼','图书馆','校医院','北门','东门','宿舍区','实验楼'];
+
+/* ---------- token 存取 ---------- */
+const store = {
+  get token(){ return localStorage.getItem('shg_at') || '' },
+  get refresh(){ return localStorage.getItem('shg_rt') || '' },
+  set(at, rt){ localStorage.setItem('shg_at', at); localStorage.setItem('shg_rt', rt) },
+  clear(){ localStorage.removeItem('shg_at'); localStorage.removeItem('shg_rt'); localStorage.removeItem('shg_user') },
+  get user(){ try { return JSON.parse(localStorage.getItem('shg_user')) } catch { return null } },
+  setUser(u){ localStorage.setItem('shg_user', JSON.stringify(u)) },
+};
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+function confirmBox(title, text){
+  return new Promise(resolve => {
+    const el = document.createElement('div');
+    el.className = 'mask';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.innerHTML = `<div class="box"><h3>${esc(title)}</h3><p>${esc(text)}</p>
+      <div class="row"><button class="btn sm ghost" data-no>取消</button><button class="btn sm danger" data-yes>确定</button></div></div>`;
+    document.body.appendChild(el);
+    el.querySelector('[data-no]').onclick = () => { el.remove(); resolve(false); };
+    el.querySelector('[data-yes]').onclick = () => { el.remove(); resolve(true); };
+  });
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso), now = Date.now(), diff = (now - d.getTime()) / 1000;
+  const p = n => String(n).padStart(2,'0');
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff/60) + ' 分钟前';
+  if (diff < 86400 && new Date().getDate() !== d.getDate() === false) return '今天 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  const yest = new Date(now - 86400 * 1000);
+  if (d.toDateString() === yest.toDateString()) return '昨天 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+const fmtDay = iso => iso ? iso.slice(0,10) : '';
+
+/* ---------- 请求封装（40102 静默刷新重放 + 鉴权头被网关剥离时自愈） ---------- */
+let refreshing = null;
+let authViaQuery = false; // 一旦发现 Authorization 头到不了服务端，自动记住改走查询串携带
+
+async function raw(method, path, body, token, viaQuery){
+  let url = API + path;
+  if (viaQuery && token) url += (url.includes('?') ? '&' : '?') + '_t=' + encodeURIComponent(token);
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token, 'x-authorization': 'Bearer ' + token } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (e) {
+    // 网络层失败（本地后端没启动 / 断网）：给可操作的中文提示，替代浏览器原生的 "Failed to fetch"
+    throw new Error(location.protocol === 'file:'
+      ? '连不上本地后端（localhost:3000）：请先双击 start-server.bat 启动服务，再刷新本页面'
+      : '网络异常：暂时连不上服务器，请检查网络后重试');
+  }
+  try { return await res.json(); }
+  catch (e) { throw new Error('服务器响应异常，请稍后重试'); }
+}
+
+async function refreshToken(){
+  if (!refreshing) {
+    // 刷新凭据放在请求体里：即使网关剥离鉴权头也能正常续期
+    refreshing = raw('POST', '/auth/refresh', { refreshToken: store.refresh })
+      .then(r => {
+        refreshing = null;
+        if (r.code !== 0) throw new Error('刷新失败');
+        store.set(r.data.accessToken, r.data.refreshToken);
+        return r.data.accessToken;
+      })
+      .catch(e => { refreshing = null; store.clear(); throw e; });
+  }
+  return refreshing;
+}
+
+async function api(method, path, body, opts = {}){
+  let r = await raw(method, path, body, store.token, authViaQuery);
+  if (r.code === 0) return r;
+  // 带着token仍收到40101：大概率是网关剥离了鉴权头 → 降级为查询串携带并重试（自学习，之后直达）
+  if (r.code === 40101 && store.token && !authViaQuery && !opts._retried){
+    authViaQuery = true;
+    r = await raw(method, path, body, store.token, true);
+    if (r.code === 0) return r;
+  }
+  // 40102 = accessToken 过期：静默刷新后重放一次
+  if (r.code === 40102 && !opts._retried){
+    try { await refreshToken(); } catch { renderTop(); renderNav(); goLogin(); throw new Error('登录已失效，请重新登录'); }
+    return api(method, path, body, { ...opts, _retried: true });
+  }
+  if (r.code === 40101){ store.clear(); renderTop(); renderNav(); if(!opts.silent){ toast('请先登录'); goLogin(); } }
+  const err = new Error(r.message || '操作失败，请重试'); err.code = r.code;
+  throw err;
+}
+function goLogin(){
+  location.hash = '#/login?redirect=' + encodeURIComponent(location.hash || '#/');
+}
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    const okDone = document.execCommand('copy'); ta.remove(); return okDone;
+  }
+}
+
+/* ---------- 路由 ---------- */
+const routes = [
+  { re: /^#\/$/,             view: viewHome },
+  { re: /^#\/login/,         view: viewLogin },
+  { re: /^#\/publish/,       view: viewPublish, auth: true },
+  { re: /^#\/post\/([^/]+)/, view: viewDetail },
+  { re: /^#\/matched\/([^/]+)/, view: viewMatched, auth: true },
+  { re: /^#\/me/,            view: viewMe, auth: true },
+  { re: /^#\/notifications/, view: viewNotifications, auth: true },
+  { re: /^#\/admin/,         view: viewAdmin, auth: true, admin: true },
+];
+
+function renderNav(){
+  const me = store.user;
+  const cur = location.hash.split('?')[0] || '#/';
+  let links = `<a href="#/" class="${cur === '#/' ? 'on' : ''}">信息大厅</a>`;
+  links += `<a href="#/publish" class="${cur.startsWith('#/publish') || cur.startsWith('#/matched') ? 'on' : ''}">发布信息</a>`;
+  if (me){
+    links += `<a href="#/notifications" class="${cur.startsWith('#/notifications') ? 'on' : ''}">消息通知<span id="notifBadge"></span></a>`;
+    links += `<a href="#/me" class="${cur.startsWith('#/me') ? 'on' : ''}">我的</a>`;
+    if (me.role === 'admin') links += `<a href="#/admin" class="${cur.startsWith('#/admin') ? 'on' : ''}">管理</a>`;
+  }
+  $nav.innerHTML = links;
+  refreshBadge();
+}
+
+function renderTop(){
+  const me = store.user;
+  if (me){
+    $top.innerHTML = `
+      <span class="who">${esc(me.nickname)}</span>
+      ${me.role === 'admin' ? '<span class="role-tag">管理员</span>' : ''}
+      <a class="avatar" href="#/me" title="我的">${esc((me.nickname || '?').slice(0,1))}</a>`;
+  } else {
+    $top.innerHTML = `<a class="btn sm" href="#/login">登录 / 注册</a>`;
+  }
+}
+
+async function refreshBadge(){
+  if (!store.user) return;
+  try {
+    const r = await api('GET', '/notifications', undefined, { silent: true });
+    if (r.code === 0){
+      const b = document.getElementById('notifBadge');
+      if (b && r.meta.unread > 0) b.className = 'badge-dot', b.textContent = r.meta.unread > 99 ? '99+' : r.meta.unread;
+    }
+  } catch {}
+}
+
+function handleRoute(){
+  const hash = location.hash || '#/';
+  const q = new URLSearchParams(hash.split('?')[1] || '');
+  const path = hash.split('?')[0];
+  renderNav(); renderTop();
+  window.scrollTo(0, 0);
+
+  for (const r of routes){
+    const m = path.match(r.re);
+    if (!m) continue;
+    if (r.auth && !store.user){
+      toast('请先登录');
+      location.hash = '#/login?redirect=' + encodeURIComponent(hash);
+      return;
+    }
+    if (r.admin && store.user?.role !== 'admin'){ toast('该页面仅管理员可访问'); return (location.hash = '#/'); }
+    return r.view(...m.slice(1), q);
+  }
+  $app.innerHTML = `<div class="wrap"><div class="empty"><span class="hand">页面走丢了。</span>它可能也被捡走了 · <a href="#/" style="text-decoration:underline">回到大厅</a></div></div>`;
+}
+window.addEventListener('hashchange', handleRoute);
+
+/* ============================================================
+ * 信息大厅：列表 / 地图 × 类型 × 分类 × 搜索 × 分页
+ * ============================================================ */
+const homeState = { view: 'list', type: 'all', category: '全部', keyword: '', page: 1, total: 0 };
+
+function homeTplMobile(){
+  return `
+  <div class="wrap">
+
+    <!-- 大字报 Hero + 双启事海报 -->
+    <div class="lp-hero">
+      <div>
+        <h1>${splitChars('丢过的东西，')}<br>${splitChars('也在偷偷')}<em>${splitChars('找你')}${circleSvg()}</em></h1>
+        <p class="lp-lead">一张启事、一次留言、一场归还 —— 校园里每件走失的物品，都在这面公告板上等一句「我找到你了」。</p>
+        <div class="lp-cta">
+          <a class="btn orange" href="#/publish?type=lost"><span class="dot"></span>我丢了东西</a>
+          <a class="btn green" href="#/publish?type=found"><span class="dot"></span>我捡到了东西</a>
+        </div>
+        <div class="lp-note">未登录也能逛公告板 · 登录后可发布、认领、看完整联系方式</div>
+      </div>
+      <div class="lp-posters" aria-hidden="true">
+        <div class="poster lost"><span class="pt">寻物启事</span><h4>一串钥匙<br>（挂蓝色小熊挂坠）</h4><p>体育馆更衣室附近，请帮忙留意。</p><div class="pm">王同学 · 今天张贴</div></div>
+        <div class="poster found"><span class="pt">招领启事</span><h4>银色 iPhone 14<br>等失主来登记</h4><p>第一食堂一楼靠窗，描述特征即可认领。</p><div class="pm">李同学 · 昨天张贴</div></div>
+      </div>
+    </div>
+
+    <!-- 最新启事跑马灯 -->
+    <div class="ticker" aria-hidden="true">
+      <div class="tk-label">最新启事</div>
+      <div class="tk-view"><div class="tk-track" id="tkTrack"><span class="tk-item">正在张贴…</span></div></div>
+    </div>
+
+    <!-- 三步流程 -->
+    <div class="lp-steps">
+      <div class="lp-step rise"><div class="num">01</div><h3>张贴<em>启事</em></h3><p>写清楚时间、地点和物品特征，贴上拾光公告板。带一张照片，找回率翻倍。</p></div>
+      <div class="lp-step rise"><div class="num">02</div><h3>等待<em>匹配</em></h3><p>相似启事自动配对推荐，有线索的同学随时留言，认领申请直达发布者。</p></div>
+      <div class="lp-step rise"><div class="num">03</div><h3>归还<em>致谢</em></h3><p>发布者核实通过，启事自动标记「已找到」。物归原主，公告板上亮起一盏灯。</p></div>
+    </div>
+
+    <!-- 橙绿对撞双入口 -->
+    <div class="lp-clash rise">
+      <div class="half lost-half">
+        <span class="tag">寻物 · 拾光橙</span>
+        <h3>我丢了东西，<br>会有人替我保管着。</h3>
+        <p>写下它最后的模样，让捡到的同学找到你。</p>
+        <a class="btn" href="#/publish?type=lost">张贴寻物启事</a>
+      </div>
+      <div class="half found-half">
+        <span class="tag">招领 · 安心绿</span>
+        <h3>我捡到了东西，<br>等失主来认领。</h3>
+        <p>替它说一句「我在这里」，物归原主。</p>
+        <a class="btn" href="#/publish?type=found">张贴招领启事</a>
+      </div>
+      <div class="mid-seal">拾</div>
+    </div>
+
+    <!-- 公告板墙：真实数据大厅（功能区） -->
+    <div class="lp-wall-head">
+      <h2>这面墙上，总有一张<em>与你有关</em>。</h2>
+      <p>以下全部是板上的真实启事 —— 筛选、搜索，或者点开一张仔细看看。</p>
+    </div>
+    <div class="toolbar">
+      <div class="tabs" id="viewTabs">
+        <button data-v="list" class="on">列表</button>
+        <button data-v="map">地图</button>
+      </div>
+      <div class="tabs" id="typeTabs">
+        <button data-t="all" class="on">全部</button>
+        <button data-t="lost" class="t-lost">失物</button>
+        <button data-t="found" class="t-found">招领</button>
+      </div>
+      <input class="search" id="kw" placeholder="搜索标题或描述，比如「校园卡」" value="${esc(homeState.keyword)}">
+      <a class="btn sm orange" href="#/publish">+ 发布信息</a>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="content"><div class="board" id="board">
+      <div class="sk-card lost tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+      <div class="sk-card found tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+      <div class="sk-card lost tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+      <div class="sk-card found tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+    </div><div class="load-more" id="more"></div></div>
+
+    <!-- 归还故事 -->
+    <div class="lp-story rise">
+      <h2>拾光墙上，最近<em>亮起的灯</em>。</h2>
+      <blockquote>之前丢的饭卡找了回来，失主还请了杯奶茶。这周又有一副耳机、一本写满笔记的线代回到了主人手里 —— 这种事，在拾光每周都在发生。</blockquote>
+      <div class="sig">—— 一位常来逛公告板的同学</div>
+      <a class="link" href="#/post/p_10">读一个真实找回的故事 →</a>
+    </div>
+  </div>
+
+  <!-- 终章 CTA -->
+  <div class="lp-final">
+    <h2>下一个回家的，<br>是<em>谁的宝贝</em>？</h2>
+    <div class="row">
+      <a class="btn orange" href="#/publish?type=lost"><span class="dot"></span>我丢了东西</a>
+      <a class="btn green" href="#/publish?type=found"><span class="dot"></span>我捡到了东西</a>
+    </div>
+    <div class="sub">SHIGUANG · CAMPUS LOST AND FOUND BOARD</div>
+  </div>`;
+}
+
+/* ---------- 首页共用功能绑定（两套模板的功能区块 ID 完全一致） ---------- */
+function bindHomeEvents(){
+  const tdEl = document.getElementById('ldToday');
+  if (tdEl){
+    const d = new Date();
+    tdEl.textContent = `${d.getMonth() + 1}月${d.getDate()}日 星期${'日一二三四五六'[d.getDay()]}`;
+  }
+
+  const chipsEl = document.getElementById('chips');
+  chipsEl.innerHTML = ['全部', ...CATEGORIES].map(c =>
+    `<button class="chip ${homeState.category === c ? 'on' : ''}" data-c="${esc(c)}">${icon(c === '全部' ? 'all' : catIcon(c))} ${esc(c)}</button>`).join('');
+
+  document.getElementById('viewTabs').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.v === 'map'){
+      // 地图模式依赖高德 key，未配置时诚实降级（与离线预览版行为一致）
+      return toast('地图模式需要配置高德 key，当前未配置，先逛列表吧');
+    }
+    homeState.view = 'list';
+    document.querySelectorAll('#viewTabs button').forEach(x => x.classList.toggle('on', x === b));
+  };
+  document.getElementById('typeTabs').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    homeState.type = b.dataset.t; homeState.page = 1;
+    document.querySelectorAll('#typeTabs button').forEach(x => x.classList.toggle('on', x === b));
+    loadPosts(true);
+  };
+  chipsEl.onclick = e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    homeState.category = b.dataset.c; homeState.page = 1;
+    chipsEl.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+    loadPosts(true);
+  };
+  let deb;
+  document.getElementById('kw').oninput = e => {
+    clearTimeout(deb);
+    deb = setTimeout(() => { homeState.keyword = e.target.value.trim(); homeState.page = 1; loadPosts(true); }, 300);
+  };
+  document.getElementById('more').onclick = e => {
+    if (e.target.id === 'btnMore'){ homeState.page++; loadPosts(false); }
+  };
+}
+
+/* ============================================================
+ * PC 首页 —— 落地页 1:1 复刻模板
+ * 版式与落地页.html 完全一致；公告板墙挂真实数据，功能不变
+ * ============================================================ */
+function homeTplPc(){
+  return `
+  <div class="ld-home">
+
+    <!-- HERO：丢了的东西，也在偷偷找你 -->
+    <section class="ld-hero">
+      <div class="ld-hero-bg" aria-hidden="true">拾</div>
+      <div class="wrap">
+        <div>
+          <p class="ld-kicker rise"><span class="dot"></span>校园失物招领平台 · 拾光</p>
+          <h1 class="rise" style="--d:.08s"><span class="ld-t-lose">丢</span>了的东西，<br>也在偷偷<br><em class="ld-hl">找你<svg class="ld-ring" viewBox="0 0 220 90" preserveAspectRatio="none" aria-hidden="true"><path d="M16 46 C 44 10, 178 4, 204 34 C 220 54, 168 80, 96 81 C 42 82, 6 68, 18 40"/></svg></em></h1>
+          <p class="ld-hero-sub rise" style="--d:.16s">在校园里丢了东西别慌，捡到了别人的宝贝别扔——贴一张启事，<b>橙色寻物</b>、<i class="b">绿色招领</i>，剩下的，交给整个校园。</p>
+          <div class="ld-hero-cta rise" style="--d:.24s">
+            <a class="btn orange" href="#/publish?type=lost"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>我丢了东西</a>
+            <a class="btn green" href="#/publish?type=found"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-7.5-10A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7.5 4c0 5.4-7.5 10-7.5 10z"/></svg>我捡到了东西</a>
+          </div>
+          <p class="ld-hero-meta rise" style="--d:.32s">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>免费使用</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>本校认证</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>平均 26 小时物归原主</span>
+          </p>
+        </div>
+        <div class="ld-stage rise" style="--d:.2s">
+          <article class="ld-poster a">
+            <div class="ld-bob" style="--bt:5.2s">
+              <span class="ld-tape" aria-hidden="true"></span>
+              <header class="ld-phead"><span>寻物启事</span><span class="ld-tno">NO.2026-0911-0042</span></header>
+              <div class="ld-pic"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="14" width="48" height="36" rx="4"/><circle cx="24" cy="30" r="6"/><path d="M16 44c1.5-5 14.5-5 16 0M38 26h14M38 34h14M38 42h9"/></svg></div>
+              <h3>银色学生证</h3>
+              <dl class="ld-prows">
+                <div class="ld-prow"><dt>地点</dt><dd>图书馆三楼自习区</dd></div>
+                <div class="ld-prow"><dt>时间</dt><dd>9月9日 下午</dd></div>
+              </dl>
+              <p class="ld-hand">对上暗号「周杰伦」，必有谢礼。</p>
+              <span class="ld-stamp orange" style="--sd:.75s"><span><b>寻找中</b><i>SHIGUANG</i></span></span>
+            </div>
+          </article>
+          <article class="ld-poster b">
+            <div class="ld-bob" style="--bt:6.4s;--bd:-2.4s">
+              <span class="ld-tape green" aria-hidden="true"></span>
+              <header class="ld-phead"><span>招领启事</span><span class="ld-tno">NO.2026-0910-0133</span></header>
+              <div class="ld-pic"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 18h28v8H18zM20 26h24v20a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4z"/><path d="M44 30h4a6 6 0 0 1 0 12h-4M26 36c2 2 4 2 6 0s4-2 6 0"/></svg></div>
+              <h3>黑色保温杯</h3>
+              <dl class="ld-prows">
+                <div class="ld-prow"><dt>地点</dt><dd>二食堂二楼</dd></div>
+                <div class="ld-prow"><dt>时间</dt><dd>9月10日 午间</dd></div>
+              </dl>
+              <p class="ld-hand">杯底有小划痕，主人来认领呀。</p>
+              <span class="ld-stamp green" style="--sd:.95s"><span><b>已找到</b><i>09.10</i></span></span>
+            </div>
+          </article>
+          <p class="ld-stage-note">— 摘自拾光公告板 · 真实快照数据</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 最新启事跑马灯（真实数据） -->
+    <div class="ticker" aria-hidden="true">
+      <div class="tk-label">最新启事</div>
+      <div class="tk-view"><div class="tk-track" id="tkTrack"><span class="tk-item">正在张贴…</span></div></div>
+    </div>
+
+    <!-- 三步，物归原主 -->
+    <section class="ld-how">
+      <div class="wrap">
+        <p class="ld-sec-kicker rise">HOW IT WORKS</p>
+        <h2 class="rise" style="--d:.08s">三步，<em>物归原主</em>。</h2>
+        <div class="ld-step rise" style="--d:.1s">
+          <span class="ld-num">01</span>
+          <div><h3>张贴启事<small>ONE MINUTE</small></h3><p>拍张照，写下地点和时间，选<b>橙色「寻物」</b>或<b>绿色「招领」</b>。一张启事一分钟，全校园都看得见。</p></div>
+        </div>
+        <div class="ld-step rise" style="--d:.16s">
+          <span class="ld-num">02</span>
+          <div><h3>智能匹配<small>AUTO MATCH</small></h3><p>相似启事自动配对。有人捡到了你丢的东西，<b>消息立刻送达</b>，不用一遍遍翻公告板。</p></div>
+        </div>
+        <div class="ld-step rise" style="--d:.22s">
+          <span class="ld-num">03</span>
+          <div><h3>如约归还<small>REUNION</small></h3><p>约个地方当面交还，或就近放进失物柜。点下「确认归还」，<b>拾光墙亮起一盏灯</b>，故事完结。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 橙绿对撞双入口 -->
+    <section class="ld-split">
+      <div class="ld-split-grid">
+        <div class="ld-panel orange rise">
+          <span class="ld-plabel">寻物启事</span>
+          <h3>我丢了东西，<br>全校园帮我看。</h3>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>橙色启事置顶推送，路过的人都会留意</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>相似物品自动匹配，第一时间收到提醒</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>找到后一键致谢，把温暖留在拾光墙</li>
+          </ul>
+          <a class="btn" href="#/publish?type=lost">贴寻物启事<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <div class="ld-panel green rise" style="--d:.12s">
+          <span class="ld-plabel">招领启事</span>
+          <h3>我捡到了东西，<br>等主人来相认。</h3>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>一张照片帮它找到主人，只需一分钟</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>不便保管？就近投进失物柜同样有效</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>归还成功点亮拾光墙，好事有人记得</li>
+          </ul>
+          <a class="btn green" href="#/publish?type=found">贴招领启事<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <span class="ld-vs" aria-hidden="true">拾</span>
+      </div>
+    </section>
+
+    <!-- 公告板墙：真实数据大厅（功能区，绑定与旧首页一致） -->
+    <section class="ld-boardsec">
+      <div class="wrap">
+        <div class="ld-board-head rise">
+          <div>
+            <p class="ld-sec-kicker">BULLETIN BOARD</p>
+            <h2>本周，它们正在<em>被寻找</em>。</h2>
+          </div>
+          <p class="ld-board-date">更新于 <time id="ldToday"></time> · 实时同步板上数据</p>
+        </div>
+        <div class="toolbar">
+          <div class="tabs" id="viewTabs">
+            <button data-v="list" class="on">列表</button>
+            <button data-v="map">地图</button>
+          </div>
+          <div class="tabs" id="typeTabs">
+            <button data-t="all" class="on">全部</button>
+            <button data-t="lost" class="t-lost">失物</button>
+            <button data-t="found" class="t-found">招领</button>
+          </div>
+          <input class="search" id="kw" placeholder="搜索标题或描述，比如「校园卡」" value="${esc(homeState.keyword)}">
+          <a class="btn sm orange" href="#/publish">+ 发布信息</a>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div id="content"><div class="board" id="board">
+          <div class="sk-card lost tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+          <div class="sk-card found tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+          <div class="sk-card lost tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+          <div class="sk-card found tape"><div class="sk-line t"></div><div class="sk-line d"></div><div class="sk-line d2"></div><div class="sk-line m"></div></div>
+        </div><div class="load-more" id="more"></div></div>
+      </div>
+    </section>
+
+    <!-- 归还故事 -->
+    <section class="ld-stories">
+      <div class="wrap">
+        <p class="ld-sec-kicker rise">REUNION STORIES</p>
+        <h2 class="rise" style="--d:.08s">拾光墙上，<em class="g">最近亮起的灯</em>。</h2>
+        <figure class="ld-quote rise" style="--d:.1s">
+          <blockquote>发布之后我睡了午觉，醒来发现校园卡已经躺在楼下失物柜里了。像魔法。</blockquote>
+          <figcaption><b>王同学 · 大二</b> —— 丢失：校园卡 · 用时 4 小时</figcaption>
+        </figure>
+        <figure class="ld-quote rise" style="--d:.16s">
+          <blockquote>我只是随手捡了把伞，结果认识了隔壁班的她。这大概就是拾光吧。</blockquote>
+          <figcaption><b>陈同学 · 大三</b> —— 拾获：蓝色长柄伞</figcaption>
+        </figure>
+        <figure class="ld-quote rise" style="--d:.22s">
+          <blockquote>团团回来了。橘色的，胖了两斤。</blockquote>
+          <figcaption><b>李同学 · 大一</b> —— 寻回：英短「团团」· 用时 26 小时</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 终章 CTA -->
+    <section class="ld-finale">
+      <div class="ld-hero-bg" aria-hidden="true">归</div>
+      <div class="wrap">
+        <p class="ld-sec-kicker rise">START NOW</p>
+        <h2 class="rise" style="--d:.08s">下一个回家的，<br>是<em>谁的宝贝</em>？</h2>
+        <p class="ld-sec-sub rise" style="--d:.16s">贴一张启事，只需要一分钟。剩下的，交给整个校园的温度。</p>
+        <div class="ld-finale-cta rise" style="--d:.24s">
+          <a class="btn orange" href="#/publish?type=lost">我丢了东西</a>
+          <a class="btn green" href="#/publish?type=found">我捡到了东西</a>
+        </div>
+      </div>
+    </section>
+
+  </div>`;
+}
+
+function viewHome(){
+  $app.innerHTML = IS_MOBILE ? homeTplMobile() : homeTplPc();
+  bindHomeEvents();
+  loadPosts(true);
+  observeRise();
+}
+
+function circleSvg(){
+  return `<svg viewBox="0 0 120 36" fill="none" preserveAspectRatio="none"><path d="M4 22 C 20 8, 55 6, 80 12 C 102 17, 112 22, 116 26" stroke="#FF7A45" stroke-width="5" stroke-linecap="round" fill="none"/></svg>`;
+}
+
+/* ---------- 纯装饰：拆字入场 / 跑马灯 / 卡片显现（不影响任何功能逻辑） ---------- */
+function splitChars(text){
+  return [...text].map((c, i) => `<span class="ch" style="--i:${i}">${c}</span>`).join('');
+}
+
+function fillTicker(items){
+  const track = document.getElementById('tkTrack');
+  if (!track) return;
+  const data = (items || []).slice(0, 8);
+  if (!data.length){
+    track.innerHTML = '<span class="tk-item">公告板虚位以待 —— 发布第一条启事吧</span>';
+    return;
+  }
+  const one = data.map(p => `<span class="tk-item ${p.type}"><i></i>${esc(p.title)}</span>`).join('');
+  // 数据太少时重复拼接，保证轨道宽度足够，双份内容才能无缝循环
+  let unit = one;
+  while (unit.length < 1500) unit += one;
+  track.innerHTML = unit + unit;
+}
+
+function revealCards(root){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cards = [...root.querySelectorAll('.card[data-id]')];
+  if (!cards.length) return;
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      io.unobserve(en.target);
+      const idx = cards.indexOf(en.target) % 12;
+      en.target.animate(
+        [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'translateY(0)' }],
+        { duration: 560, delay: Math.min(idx * 60, 480), easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }
+      );
+    });
+  }, { threshold: .1 });
+  cards.forEach(c => io.observe(c));
+}
+
+function initDecor(){
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  const el = document.getElementById('mhIssue');
+  if (el) el.textContent = `CAMPUS LOST & FOUND · ${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} 刊`;
+}
+
+/** 叙事区块滚动显现（纯装饰） */
+function observeRise(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){
+    document.querySelectorAll('.rise').forEach(el => el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      io.unobserve(en.target);
+      en.target.classList.add('in');
+    });
+  }, { threshold: .12 });
+  document.querySelectorAll('.rise:not(.in)').forEach(el => io.observe(el));
+}
+
+async function loadPosts(reset){
+  const board = document.getElementById('board'); if (!board) return;
+  const more = document.getElementById('more');
+  const q = new URLSearchParams({ page: homeState.page, pageSize: 12 });
+  if (homeState.type !== 'all') q.set('type', homeState.type);
+  if (homeState.category !== '全部') q.set('category', homeState.category);
+  if (homeState.keyword) q.set('keyword', homeState.keyword);
+
+  try {
+    const r = await api('GET', '/posts?' + q, undefined, { silent: true });
+    const items = r.data.list; homeState.total = r.meta.total;
+    const html = items.map(postCard).join('');
+    if (reset) board.innerHTML = html || `<div class="empty" style="grid-column:1/-1"><span class="hand">公告板上还空着一块。</span>还没有相关信息，换个筛选条件试试</div>`;
+    else board.insertAdjacentHTML('beforeend', html);
+    const shown = homeState.page * 12;
+    more.innerHTML = shown < homeState.total ? `<button class="btn" id="btnMore">再看一批（${shown}/${homeState.total}）</button>`
+      : (homeState.total ? `<div style="color:var(--ink-60);font-size:13px">— 没有更多了 —</div>` : '');
+    bindCards(board);
+    if (reset) fillTicker(items);
+    revealCards(board);
+  } catch(e){ board.innerHTML = `<div class="empty" style="grid-column:1/-1">${esc(e.message)}</div>`; }
+}
+
+function bindCards(root){
+  root.querySelectorAll('.card[data-id]').forEach(el => el.onclick = () => location.hash = '#/post/' + el.dataset.id);
+}
+
+function postCard(p){
+  const isLost = p.type === 'lost';
+  const done = p.status === 'resolved';
+  const hasImg = p.images && p.images.length;
+  return `
+  <article class="card ${done ? '' : p.type} tape" data-id="${esc(p.id)}">
+    ${hasImg ? `<img class="thumb" src="${esc(assetUrl(p.images[0]))}" alt="" loading="lazy">`
+             : `<div class="noimg">${icon('photo')}<span>暂无照片</span><small>请以文字描述为准</small></div>`}
+    <span class="kicker ${done ? 'done' : ''}">${done ? '已找到 ✓' : isLost ? '寻物启事' : '招领启事'}</span>
+    <h3>${esc(p.title)}</h3>
+    <p class="desc">${esc(p.description)}</p>
+    <div class="meta"><span>${icon('pin')} ${esc(p.location || '地点未知')}${p.locationDetail ? ' · ' + esc(p.locationDetail) : ''}</span>
+      <span class="badge-cat">${icon(catIcon(p.category))} ${esc(p.category)}</span>
+      <span class="state-tag ${p.status}">${done ? '已解决' : '进行中'}</span></div>
+    <div class="foot">
+      <span>${esc(p.authorName)} · ${fmtTime(p.createdAt)}</span>
+      <span class="cnt"><span>${icon('heart')} ${p.likeCount}</span><span>${icon('chat')} ${p.commentCount}</span></span>
+    </div>
+  </article>`;
+}
+
+/* ============================================================
+ * 登录 / 注册
+ * ============================================================ */
+function viewLogin(q){
+  const redirect = q.get('redirect') || '#/';
+  $app.innerHTML = `
+  <div class="wrap"><div class="form-page">
+    <div class="paper-card tape">
+      <h2>登 记 处</h2>
+      <p class="sub">丢了东西？捡到东西？来这儿说一声。未登录也可以浏览信息，但看不到完整联系方式。</p>
+      <div class="type-toggle" id="authTabs">
+        <button class="on-lost" data-m="login">登 录</button>
+        <button data-m="reg">注 册</button>
+      </div>
+      <div class="field"><label>用户名</label><input id="fUser" placeholder="2-20 位中文、字母、数字或下划线" autocomplete="username"></div>
+      <div class="field" id="nickField" style="display:none"><label>昵称</label><input id="fNick" placeholder="怎么称呼你" maxlength="12"></div>
+      <div class="field"><label>密码</label><input id="fPass" type="password" placeholder="8-20 位，需同时包含字母和数字" autocomplete="current-password"></div>
+      <div class="field" id="sidField" style="display:none"><label>学号 <span style="color:var(--ink-60);font-weight:400">（选填，用于身份认证）</span></label>
+        <input id="fSid" placeholder="6-20 位数字" maxlength="20"></div>
+      <div class="form-err" id="fErr"></div>
+      <button class="btn orange" style="width:100%" id="fGo">登 录</button>
+      <div style="text-align:center;margin-top:14px;font-size:13.5px;color:var(--ink-60)" id="fSwitch"></div>
+      <div class="demo-tip">
+        演示账号（点击填入，密码均为 <b>123456</b>）：<br>
+        <b>管理员</b> <code data-u="admin">admin</code> ｜
+        <b>用户</b> <code data-u="demo">demo（王同学）</code> <code data-u="li">li（李同学）</code> <code data-u="zhao">zhao（赵同学）</code>
+      </div>
+    </div>
+  </div></div>`;
+
+  let mode = 'login';
+  const tabs = document.getElementById('authTabs');
+  const switchEl = document.getElementById('fSwitch');
+  function syncMode(){
+    const isReg = mode === 'reg';
+    document.getElementById('nickField').style.display = isReg ? '' : 'none';
+    document.getElementById('sidField').style.display = isReg ? '' : 'none';
+    document.getElementById('fGo').textContent = isReg ? '注册并登录' : '登 录';
+    document.getElementById('fGo').className = 'btn ' + (isReg ? 'green' : 'orange');
+    switchEl.innerHTML = isReg ? `已有账号？<a href="javascript:void(0)" id="sw" style="text-decoration:underline;color:var(--orange)">去登录</a>`
+                               : `还没有账号？<a href="javascript:void(0)" id="sw" style="text-decoration:underline;color:var(--green)">去注册</a>`;
+    document.getElementById('sw').onclick = () => { mode = mode === 'reg' ? 'login' : 'reg';
+      tabs.querySelectorAll('button').forEach(x => x.classList.toggle('on-lost', (x.dataset.m === 'reg') === (mode === 'reg')));
+      syncMode(); };
+  }
+  tabs.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    mode = b.dataset.m;
+    tabs.querySelectorAll('button').forEach(x => x.classList.toggle('on-lost', x === b));
+    syncMode();
+  };
+  syncMode();
+  document.querySelectorAll('.demo-tip code').forEach(c => c.onclick = () => {
+    document.getElementById('fUser').value = c.dataset.u;
+    document.getElementById('fPass').value = c.dataset.p || '123456';
+  });
+  async function submit(){
+    const err = document.getElementById('fErr');
+    const username = document.getElementById('fUser').value.trim();
+    const password = document.getElementById('fPass').value;
+    err.textContent = '';
+    try {
+      let r;
+      if (mode === 'reg'){
+        r = await api('POST', '/auth/register', {
+          username, password,
+          nickname: document.getElementById('fNick').value.trim() || username,
+          studentId: document.getElementById('fSid').value.trim(),
+        });
+        toast('注册成功');
+      } else {
+        r = await api('POST', '/auth/login', { username, password }, { silent: true });
+        toast('登录成功');
+      }
+      store.set(r.data.accessToken, r.data.refreshToken);
+      store.setUser(r.data.user);
+      renderTop(); renderNav();
+      location.hash = redirect;
+    } catch(e){ err.textContent = e.message; }
+  }
+  document.getElementById('fGo').onclick = submit;
+  document.getElementById('fPass').onkeydown = e => { if (e.key === 'Enter') submit(); };
+}
+
+/* ============================================================
+ * 发布 / 编辑（图片上传、联系方式、地图标记占位、无图确认）
+ * ============================================================ */
+const publishState = { type: 'lost', images: [] };
+
+function viewPublish(q){
+  const editId = q.get('id');
+  // 双入口按钮带 ?type=lost/found 预选类型；编辑时随后端数据覆盖
+  publishState.type = q.get('type') === 'found' ? 'found' : 'lost';
+  publishState.images = [];
+  $app.innerHTML = `
+  <div class="wrap"><div class="form-page">
+    <div class="paper-card tape">
+      <h2>${editId ? '编辑信息' : '贴一张启事'}</h2>
+      <p class="sub">描述物品特征、内含物等，越具体越容易匹配。</p>
+      <div class="field"><label>信息类型</label>
+        <div class="type-toggle" id="pType">
+          <button data-t="lost">我丢了</button>
+          <button data-t="found">我捡到了</button>
+        </div>
+      </div>
+      <div class="field"><label>图片</label>
+        <div class="up-grid" id="upGrid"></div>
+        <div class="hint">最多 3 张，单张 ≤ 5MB（建议上传，更容易被认领）</div>
+      </div>
+      <div class="field"><label>标题</label><input id="pTitle" maxlength="30" placeholder="如：丢失黑色皮质钱包"></div>
+      <div class="grid2">
+        <div class="field"><label>分类</label>
+          <select id="pCat"><option value="">请选择分类</option>${CATEGORIES.map(c => `<option>${c}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>发生时间</label><input id="pTime" type="datetime-local"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>地点</label><input id="pLoc" list="locList" placeholder="如：第三教学楼">
+          <datalist id="locList">${LOCATIONS.map(l => `<option value="${l}">`).join('')}</datalist>
+        </div>
+        <div class="field"><label>详细位置 <span style="color:var(--ink-60);font-weight:400">（选填）</span></label>
+          <input id="pLocD" maxlength="20" placeholder="如：302 教室"></div>
+      </div>
+      <div class="field"><label>地图标记 <span style="color:var(--ink-60);font-weight:400">（选填，在地图上标出位置）</span></label>
+        <button class="btn sm ghost" id="pMap">📍 在地图上标记</button>
+        <div class="hint">点击地图标记丢失/拾取位置，marker 可拖动微调（需配置高德 key）</div>
+      </div>
+      <div class="field"><label>详细描述</label><textarea id="pDesc" maxlength="500" placeholder="描述物品特征、内含物等，越具体越容易匹配"></textarea></div>
+      <div class="field"><label>联系方式</label>
+        <div class="contact-row">
+          <select id="pContactType"><option value="phone">手机号</option><option value="wechat">微信</option></select>
+          <input id="pContactVal" maxlength="30" placeholder="请输入手机号">
+        </div>
+        <div class="hint">未登录用户只能看到脱敏后的联系方式</div>
+      </div>
+      <div class="form-err" id="pErr"></div>
+      <button class="btn orange" style="width:100%" id="pGo">${editId ? '保存修改' : '发布'}</button>
+    </div>
+  </div></div>`;
+
+  const tg = document.getElementById('pType');
+  function syncType(){
+    tg.querySelector('[data-t="lost"]').className = publishState.type === 'lost' ? 'on-lost' : '';
+    tg.querySelector('[data-t="found"]').className = publishState.type === 'found' ? 'on-found' : '';
+    document.getElementById('pGo').className = 'btn ' + (publishState.type === 'lost' ? 'orange' : 'green');
+  }
+  tg.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    publishState.type = b.dataset.t; syncType();
+  };
+  syncType();
+  document.getElementById('pContactType').onchange = e => {
+    document.getElementById('pContactVal').placeholder = e.target.value === 'wechat' ? '请输入账号' : '请输入 11 位手机号';
+  };
+  document.getElementById('pMap').onclick = () => toast('地图模式需要配置高德 key，当前未配置');
+  renderUpGrid();
+
+  if (editId){
+    api('GET', '/posts/' + editId, undefined, { silent: true }).then(r => {
+      const p = r.data;
+      if (!p.isMine && store.user?.role !== 'admin'){ toast('只能编辑自己发布的信息'); location.hash = '#/post/' + editId; return; }
+      publishState.type = p.type; syncType();
+      publishState.images = (p.images || []).map(assetUrl);
+      document.getElementById('pTitle').value = p.title;
+      document.getElementById('pDesc').value = p.description;
+      document.getElementById('pCat').value = p.category;
+      document.getElementById('pLoc').value = p.location || '';
+      document.getElementById('pLocD').value = p.locationDetail || '';
+      if (p.eventTime) document.getElementById('pTime').value = p.eventTime.slice(0,16);
+      if (p.contact && !p.contact.masked){
+        document.getElementById('pContactType').value = p.contact.method;
+        document.getElementById('pContactVal').value = p.contact.value;
+      }
+      renderUpGrid();
+    }).catch(e => toast(e.message));
+  }
+
+  function renderUpGrid(){
+    const grid = document.getElementById('upGrid');
+    grid.innerHTML = publishState.images.map((src, i) => `
+      <div class="up-item"><img src="${esc(src)}" alt=""><button class="rm" data-i="${i}">✕</button></div>`).join('') +
+      (publishState.images.length < 3 ? `<div class="up-box" id="upAdd" title="添加图片">＋</div>` : '');
+    grid.querySelectorAll('.rm').forEach(b => b.onclick = () => { publishState.images.splice(+b.dataset.i, 1); renderUpGrid(); });
+    const add = document.getElementById('upAdd');
+    if (add) add.onclick = () => pickImage();
+  }
+
+  async function pickImage(){
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/png,image/jpeg,image/webp';
+    input.onchange = async () => {
+      const file = input.files[0]; if (!file) return;
+      if (file.size > 5 * 1024 * 1024) return toast('单张图片不能超过 5MB');
+      toast('上传中...');
+      try {
+        const dataURL = await compressImage(file);
+        const r = await api('POST', '/upload', { image: dataURL });
+        publishState.images.push(assetUrl(r.data.url));
+        renderUpGrid();
+      } catch(e){ toast(e.message || '上传失败'); }
+    };
+    input.click();
+  }
+
+  document.getElementById('pGo').onclick = async () => {
+    const err = document.getElementById('pErr'); err.textContent = '';
+    const title = document.getElementById('pTitle').value.trim();
+    const desc = document.getElementById('pDesc').value.trim();
+    const cat = document.getElementById('pCat').value;
+    const cType = document.getElementById('pContactType').value;
+    const cVal = document.getElementById('pContactVal').value.trim();
+    if (!title) { err.textContent = '请输入标题'; return; }
+    if (!desc) { err.textContent = '请输入描述'; return; }
+    if (!cat) { err.textContent = '请选择分类'; return; }
+    if (cVal && cType === 'phone' && !/^1\d{10}$/.test(cVal)) { err.textContent = '请输入 11 位手机号'; return; }
+
+    // 对齐预览版：没传图片先确认一次
+    if (!editId && publishState.images.length === 0 && !publishState._noImgConfirmed){
+      const go = await new Promise(resolve => {
+        const el = document.createElement('div');
+        el.className = 'mask';
+        el.innerHTML = `<div class="box"><h3>不上传图片吗？</h3>
+          <p>带图片的信息更容易被认领，建议至少上传一张。</p>
+          <div class="row"><button class="btn sm ghost" data-no>仍然发布</button><button class="btn sm green" data-yes>去上传</button></div></div>`;
+        document.body.appendChild(el);
+        el.querySelector('[data-no]').onclick = () => { el.remove(); resolve(true); };
+        el.querySelector('[data-yes]').onclick = () => { el.remove(); resolve(false); };
+      });
+      if (!go) return;
+      publishState._noImgConfirmed = true;
+    }
+
+    const timeVal = document.getElementById('pTime').value;
+    const body = {
+      type: publishState.type, title, description: desc, category: cat,
+      location: document.getElementById('pLoc').value.trim(),
+      locationDetail: document.getElementById('pLocD').value.trim(),
+      eventTime: timeVal ? new Date(timeVal).toISOString() : undefined,
+      contact: cVal ? { method: cType, value: cVal } : null,
+      images: publishState.images,
+    };
+    try {
+      if (editId){
+        await api('PUT', '/posts/' + editId, body);
+        toast('已保存');
+        location.hash = '#/post/' + editId;
+      } else {
+        const r = await api('POST', '/posts', body);
+        toast('发布成功，正在匹配…');
+        location.hash = '#/matched/' + r.data.id;
+      }
+    } catch(e){ err.textContent = e.message; }
+  };
+}
+
+/** 图片压缩：长边压到 1280，转 jpeg，减小上传体积 */
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => reject(new Error('图片读取失败'));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('图片读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- 发布成功 · 相似匹配页 ---------- */
+async function viewMatched(id){
+  $app.innerHTML = `<div class="wrap"><div class="detail"><div class="empty">正在匹配…</div></div></div>`;
+  let post, matches;
+  try {
+    post = (await api('GET', '/posts/' + id, undefined, { silent: true })).data;
+    matches = (await api('GET', `/posts/${id}/matches`, undefined, { silent: true })).data;
+  } catch(e){ $app.querySelector('.detail').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const tip = post.type === 'lost' ? '已经帮你留意着，有新帖进来可以再来看' : '点一条看看，说不定就是它在等你';
+
+  $app.innerHTML = `
+  <div class="wrap"><div class="detail">
+    <div class="matched-hero">
+      <div class="ok">✓</div>
+      <h2>发布成功，正在匹配…</h2>
+      <p style="color:var(--ink-60);font-size:14.5px">${tip}</p>
+    </div>
+    <h3 class="section-t">${post.type === 'lost' ? '这些招领可能是你丢的' : '这些寻物可能在找它'}</h3>
+    <div class="sim-grid" id="simBoard">
+      ${matches.length ? matches.map(postCard).join('') :
+        `<div class="empty" style="grid-column:1/-1"><span class="hand">暂时没有匹配项。</span>等新帖子进来会更容易中</div>`}
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;padding:20px 0 60px;flex-wrap:wrap">
+      <a class="btn" href="#/post/${esc(id)}">去看我发的</a>
+      <a class="btn green" href="#/">完成，回首页</a>
+    </div>
+  </div></div>`;
+  bindCards(document.getElementById('simBoard'));
+}
+
+/* ============================================================
+ * 详情：图片 / 联系方式（脱敏）/ 点赞 / 认领 / 评论 / 相似推荐
+ * ============================================================ */
+async function viewDetail(id){
+  $app.innerHTML = `<div class="wrap"><div class="detail"><div class="empty">加载中...</div></div></div>`;
+  let post, comments, matches, myClaims;
+  try {
+    post = (await api('GET', '/posts/' + id, undefined, { silent: true })).data;
+    [comments, matches] = await Promise.all([
+      api('GET', `/posts/${id}/comments`, undefined, { silent: true }).then(r => r.data),
+      api('GET', `/posts/${id}/matches`, undefined, { silent: true }).then(r => r.data).catch(() => []),
+    ]);
+    myClaims = store.user
+      ? (await api('GET', '/claims/mine', undefined, { silent: true })).data.received.filter(c => c.postId === id)
+      : [];
+  } catch(e){
+    $app.querySelector('.detail').innerHTML = `<div class="empty"><span class="hand">信息不存在。</span>${esc(e.message)}</div>`;
+    return;
+  }
+  const me = store.user;
+  const isMine = !!post.isMine;
+  const isAdmin = me?.role === 'admin';
+  const canManage = isMine || isAdmin;
+  const isLost = post.type === 'lost';
+  const resolved = post.status === 'resolved';
+
+  const claimBtn = !me
+    ? `<a class="btn ${isLost ? 'green' : 'orange'}" href="#/login?redirect=${encodeURIComponent('#/post/' + id)}">登录后认领</a>`
+    : isMine ? `<span style="align-self:center;color:var(--ink-60);font-size:13.5px">这是你发布的启事</span>`
+    : `<button class="btn ${isLost ? 'green' : 'orange'}" id="btnClaim">这是我的，申请认领</button>`;
+
+  const c = post.contact;
+  const contactHTML = !c ? '' : `
+    <div class="contact-card">
+      <div class="ic">${c.method === 'phone' ? '📞' : '💬'}</div>
+      <div>
+        <div class="val">${c.method === 'phone' ? esc(c.value) : (c.masked ? '登录后查看' : '微信：' + esc(c.value))}</div>
+        <div class="sub">${c.masked ? '未登录用户只能看到脱敏后的联系方式' : isLost ? '失主可联系归还 / 致谢' : '有线索？赶紧告诉TA'}</div>
+      </div>
+      <div class="ops">
+        ${c.masked ? `<a class="btn sm" href="#/login?redirect=${encodeURIComponent('#/post/' + id)}">登录后查看</a>` : `
+          ${c.method === 'phone' ? `<a class="btn sm green" href="tel:${esc(c.value)}">一键拨打</a>` : ''}
+          <button class="btn sm" id="btnCopy">复制</button>`}
+      </div>
+    </div>`;
+
+  $app.innerHTML = `
+  <div class="wrap"><div class="detail">
+    <a class="back" href="#/">← 回到大厅</a>
+    <div class="paper-card" style="padding:28px">
+      <div class="d-head">
+        <span class="kicker ${resolved ? 'done' : ''}" style="background:${resolved ? 'var(--ink)' : isLost ? 'var(--orange)' : 'var(--green)'};color:#fff;font-weight:900;font-size:12.5px;letter-spacing:2px;padding:3px 10px;border-radius:4px">${resolved ? '已找到 ✓' : isLost ? '寻物启事' : '招领启事'}</span>
+        <span class="badge-cat">${esc(post.category)}</span>
+        <span class="state-tag ${post.status}">${resolved ? '已解决' : '进行中'}</span>
+      </div>
+      <h1 class="d-title">${esc(post.title)}</h1>
+      <div class="d-meta">
+        <span><b>${esc(post.authorName)}</b>${post.studentId ? ' <span class="cert">已认证</span>' : ''}</span>
+        <span>发布于 ${fmtTime(post.createdAt)}</span>
+        <span>${icon('pin')} ${esc(post.location || '地点未知')}${post.locationDetail ? ' · ' + esc(post.locationDetail) : ''}</span>
+        <span>${icon('clock')} ${fmtDay(post.eventTime)}</span>
+        <span>${icon('eye')} 浏览 ${post.viewCount}</span>
+        ${resolved ? `<span>解决时间 ${fmtDay(post.resolvedAt)}</span>` : ''}
+      </div>
+      ${post.images && post.images.length
+        ? `<div class="d-imgs">${post.images.map(src => `<img src="${esc(assetUrl(src))}" alt="" loading="lazy">`).join('')}</div>`
+        : `<div class="noimg">${icon('photo')}<span>这条启事没有照片</span><small>认领前请仔细核对文字特征</small></div>`}
+      <div class="d-body">${esc(post.description)}</div>
+      ${contactHTML}
+      <div class="d-actions">
+        <button class="btn sm ${post.isLiked ? 'orange' : ''}" id="btnLike">♥ 点赞 ${post.likeCount}</button>
+        ${claimBtn}
+        ${canManage ? (resolved
+          ? `<button class="btn sm" id="btnResolve">撤销已解决</button>`
+          : `<button class="btn sm green" id="btnResolve">标记为已解决</button>`) : ''}
+        ${canManage ? `<a class="btn sm ghost" href="#/publish?id=${esc(post.id)}">编辑</a>
+          <button class="btn sm danger" id="btnDel">删除</button>` : ''}
+      </div>
+    </div>
+
+    <h3 class="section-t">认领核实（${myClaims.length}）</h3>
+    <div id="claims">
+      ${myClaims.length ? myClaims.map(c => `
+        <div class="claim-box">
+          <div class="line"><b>${esc(c.claimantName)} 申请认领</b>
+            <span class="claim-state ${c.status}">${{pending:'待核实',approved:'已通过',rejected:'已拒绝',closed:'已关闭'}[c.status]}</span></div>
+          <p class="ans">${esc(c.answer)}</p>
+          ${c.status === 'pending' && canManage ? `
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn sm green" data-approve="${esc(c.id)}">✓ 核实通过，标记已找回</button>
+            <button class="btn sm danger" data-reject="${esc(c.id)}">拒绝</button>
+          </div>` : ''}
+        </div>`).join('') : `<div style="color:var(--ink-60);font-size:13.5px">还没有人申请认领。</div>`}
+    </div>
+
+    <h3 class="section-t">相似推荐</h3>
+    <div class="sim-grid" id="simBoard">
+      ${matches.length ? matches.map(postCard).join('') :
+        `<div class="empty" style="grid-column:1/-1"><span class="hand">暂时没有匹配项。</span>等新帖子进来会更容易中</div>`}
+    </div>
+
+    <h3 class="section-t">评论（${comments.length}）</h3>
+    <div id="cmts">${comments.length ? comments.map(commentView).join('') : '<div style="color:var(--ink-60);font-size:13.5px">还没有评论，来说点什么</div>'}</div>
+    ${me ? `
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <input id="cInput" placeholder="说点什么..." maxlength="500">
+      <button class="btn sm orange" id="cGo" style="flex:none">发送</button>
+    </div>` : `<p style="color:var(--ink-60);font-size:13.5px;margin-top:12px"><a href="#/login?redirect=${encodeURIComponent('#/post/' + id)}" style="text-decoration:underline">登录</a> 后才能评论和认领。</p>`}
+  </div></div>`;
+
+  bindCards(document.getElementById('simBoard'));
+  document.getElementById('btnCopy')?.addEventListener('click', async () => {
+    if (await copyText(c.value)) toast('已复制，去粘贴给TA吧');
+  });
+
+  const bl = document.getElementById('btnLike');
+  if (bl) bl.onclick = async () => {
+    if (!me) return toast('登录后才能点赞');
+    try {
+      const r = await api('POST', `/posts/${id}/like`);
+      bl.className = 'btn sm ' + (r.data.isLiked ? 'orange' : '');
+      bl.textContent = '♥ 点赞 ' + r.data.likeCount;
+    } catch(e){ toast(e.message); }
+  };
+  const bc = document.getElementById('btnClaim');
+  if (bc) bc.onclick = async () => {
+    const answer = prompt('请描述物品特征，供发布者核实：\n（如颜色、划痕、内容物等）');
+    if (!answer || !answer.trim()) return;
+    try { await api('POST', `/posts/${id}/claims`, { answer: answer.trim() }); toast('认领申请已提交，等待对方核实'); viewDetail(id); }
+    catch(e){ toast(e.message); }
+  };
+  const br = document.getElementById('btnResolve');
+  if (br) br.onclick = async () => {
+    if (!resolved && !(await confirmBox('标记为已解决？', '确定吗？标记后帖子会展示为「已找到」。'))) return;
+    try {
+      await api('PUT', '/posts/' + id, { status: resolved ? 'open' : 'resolved' });
+      toast(resolved ? '已撤销' : '已标记为已解决');
+      viewDetail(id);
+    } catch(e){ toast(e.message); }
+  };
+  const bd = document.getElementById('btnDel');
+  if (bd) bd.onclick = async () => {
+    if (!(await confirmBox('删除信息', '删除后将不再展示，确定吗？'))) return;
+    try { await api('DELETE', '/posts/' + id); toast('已删除'); location.hash = '#/'; } catch(e){ toast(e.message); }
+  };
+  $app.querySelectorAll('[data-approve]').forEach(b => b.onclick = () => resolveClaim(b.dataset.approve, 'approve', () => viewDetail(id)));
+  $app.querySelectorAll('[data-reject]').forEach(b => b.onclick = () => resolveClaim(b.dataset.reject, 'reject', () => viewDetail(id)));
+
+  const cg = document.getElementById('cGo');
+  if (cg) cg.onclick = () => sendComment(id, null, () => viewDetail(id));
+  const ci = document.getElementById('cInput');
+  if (ci) ci.onkeydown = e => { if (e.key === 'Enter') sendComment(id, null, () => viewDetail(id)); };
+  $app.querySelectorAll('[data-reply]').forEach(b => b.onclick = () => {
+    const input = document.getElementById('cInput');
+    input.value = '';
+    input.placeholder = '回复 ' + b.dataset.name + '：';
+    input.focus();
+    input.dataset.replyTo = b.dataset.reply;
+    input.dataset.replyName = b.dataset.name;
+  });
+  $app.querySelectorAll('[data-delc]').forEach(b => b.onclick = async () => {
+    if (!(await confirmBox('删除评论', '确定吗？'))) return;
+    try { await api('DELETE', '/comments/' + b.dataset.delc); toast('已删除'); viewDetail(id); } catch(e){ toast(e.message); }
+  });
+}
+
+function commentView(c){
+  return `
+  <div class="cmt">
+    <div class="who-line"><b>${esc(c.authorName)}</b>
+      <span>${fmtTime(c.createdAt)}${c.canDelete ? ` <button data-delc="${esc(c.id)}">删除</button>` : ''}</span></div>
+    <p>${c.replyTo ? `<span class="reply-tag">回复 @${esc(c.replyTo.name)}：</span>` : ''}${esc(c.content)}</p>
+    ${c.canReply ? `<div style="margin-top:6px"><button class="mini" data-reply="${esc(c.id)}" data-name="${esc(c.authorName)}">回复</button></div>` : ''}
+  </div>`;
+}
+
+async function sendComment(id, replyTo, refresh){
+  const input = document.getElementById('cInput');
+  const content = input.value.trim();
+  if (!content) return toast('请输入评论内容');
+  const body = { content };
+  if (input.dataset.replyTo) body.replyTo = { id: input.dataset.replyTo };
+  try { await api('POST', `/posts/${id}/comments`, body); toast('已发布'); refresh(); }
+  catch(e){ toast(e.message); }
+}
+
+async function resolveClaim(claimId, action, refresh){
+  try {
+    await api('POST', `/claims/${claimId}/resolve`, { action });
+    toast(action === 'approve' ? '已核实通过，帖子标记为已找回' : '已拒绝该认领');
+    refresh && refresh();
+  } catch(e){ toast(e.message); }
+}
+
+/* ============================================================
+ * 我的：资料 / 我的发布（编辑、删除、标记解决）
+ * ============================================================ */
+async function viewMe(){
+  $app.innerHTML = `<div class="wrap"><div class="detail" style="max-width:860px"><div class="empty">加载中...</div></div></div>`;
+  const me = store.user;
+  let posts;
+  try {
+    const r = await api('GET', '/posts?page=1&pageSize=50', undefined, { silent: true });
+    posts = r.data.list.filter(p => p.isMine);
+  } catch(e){ $app.querySelector('.detail').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const resolvedCount = posts.filter(p => p.status === 'resolved').length;
+
+  $app.innerHTML = `
+  <div class="wrap"><div class="detail" style="max-width:860px">
+    <div class="profile-head">
+      <div class="avatar">${esc((me.nickname || '?').slice(0,1))}</div>
+      <div style="flex:1">
+        <h2>${esc(me.nickname)} ${me.studentId ? '<span class="cert">已认证</span>' : ''}</h2>
+        <div style="color:var(--ink-60);font-size:13.5px;margin-top:4px">@${esc(me.username)}${me.studentId ? ' · 学号 ' + esc(me.studentId) : ''} · 共发布 ${posts.length} 条 · 已解决 ${resolvedCount} 条</div>
+      </div>
+      <button class="btn sm ghost" id="btnLogout">退出登录</button>
+    </div>
+
+    <h3 class="section-t">我的发布（${posts.length}）</h3>
+    ${posts.length ? posts.map(p => `
+      <div class="cmt" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <span class="kicker" style="background:${p.type==='lost'?'var(--orange)':'var(--green)'};color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;margin-right:8px">${p.type==='lost'?'寻物':'招领'}</span>
+          <a href="#/post/${esc(p.id)}" style="font-weight:700">${esc(p.title)}</a>
+          <span class="state-tag ${p.status}" style="margin-left:8px">${p.status==='resolved'?'已解决':'进行中'}</span>
+          <div style="color:var(--ink-60);font-size:12.5px;margin-top:4px">${fmtTime(p.createdAt)} · ♥${p.likeCount} · 💬${p.commentCount} · 👁${p.viewCount}</div>
+        </div>
+        <div class="ops" style="display:flex;gap:8px;flex:none">
+          ${p.status === 'open' ? `<button class="mini ok" data-res="${esc(p.id)}">标记已解决</button>` : `<button class="mini" data-unres="${esc(p.id)}">撤销已解决</button>`}
+          <a class="mini" href="#/publish?id=${esc(p.id)}">编辑</a>
+          <button class="mini warn" data-delp="${esc(p.id)}">删除</button>
+        </div>
+      </div>`).join('') :
+      `<div class="empty" style="padding:40px 0"><span class="hand">还没有发布过信息。</span><a class="btn sm orange" href="#/publish">去发布</a></div>`}
+  </div></div>`;
+
+  document.getElementById('btnLogout').onclick = async () => {
+    if (!(await confirmBox('退出登录', '确定要退出吗？'))) return;
+    store.clear(); renderTop(); renderNav(); toast('已退出'); location.hash = '#/';
+  };
+  $app.querySelectorAll('[data-res]').forEach(b => b.onclick = async () => {
+    if (!(await confirmBox('标记为已解决', '确定吗？'))) return;
+    try { await api('PUT', '/posts/' + b.dataset.res, { status: 'resolved' }); viewMe(); } catch(e){ toast(e.message); }
+  });
+  $app.querySelectorAll('[data-unres]').forEach(b => b.onclick = async () => {
+    try { await api('PUT', '/posts/' + b.dataset.unres, { status: 'open' }); viewMe(); } catch(e){ toast(e.message); }
+  });
+  $app.querySelectorAll('[data-delp]').forEach(b => b.onclick = async () => {
+    if (!(await confirmBox('删除信息', '删除后将不再展示，确定吗？'))) return;
+    try { await api('DELETE', '/posts/' + b.dataset.delp); toast('已删除'); viewMe(); } catch(e){ toast(e.message); }
+  });
+}
+
+/* ============================================================
+ * 消息通知
+ * ============================================================ */
+async function viewNotifications(){
+  $app.innerHTML = `<div class="wrap"><div class="detail" style="max-width:720px"><div class="empty">加载中...</div></div></div>`;
+  let list;
+  try { list = (await api('GET', '/notifications', undefined, { silent: true })).data; }
+  catch(e){ $app.querySelector('.detail').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+
+  $app.innerHTML = `
+  <div class="wrap"><div class="detail" style="max-width:720px">
+    <div class="profile-head">
+      <h2 style="flex:1">消息通知</h2>
+      ${list.length ? '<button class="btn sm ghost" id="readAll">全部已读</button>' : ''}
+    </div>
+    ${list.length ? list.map(n => `
+      <div class="notif ${n.read ? 'read' : 'unread'}"><span class="dot"></span>
+        <div style="flex:1">
+          ${esc(n.content)}
+          ${n.postId ? '' : '<div style="color:var(--ink-60);font-size:12px;margin-top:2px">帖子已删除</div>'}
+          <br><time>${fmtTime(n.createdAt)}</time>
+        </div>
+        ${n.postId ? `<a class="mini" href="#/post/${esc(n.postId)}">查看</a>` : ''}
+      </div>`).join('') : '<div class="empty"><span class="hand">还没有消息。</span>有新动态会在这里告诉你</div>'}
+  </div></div>`;
+
+  const ra = document.getElementById('readAll');
+  if (ra) ra.onclick = async () => {
+    try { await api('POST', '/notifications/read'); refreshBadge(); viewNotifications(); } catch(e){ toast(e.message); }
+  };
+}
+
+/* ============================================================
+ * 管理员后台
+ * ============================================================ */
+async function viewAdmin(){
+  $app.innerHTML = `<div class="wrap"><div class="detail" style="max-width:960px"><div class="empty">核对台账中…</div></div></div>`;
+  let stats, users, pendClaims;
+  try {
+    [stats, users, pendClaims] = await Promise.all([
+      api('GET', '/admin/stats', undefined, { silent: true }).then(r => r.data),
+      api('GET', '/admin/users', undefined, { silent: true }).then(r => r.data),
+      api('GET', '/admin/claims', undefined, { silent: true }).then(r => r.data),
+    ]);
+  } catch(e){ $app.querySelector('.detail').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const me = store.user;
+
+  $app.innerHTML = `
+  <div class="wrap"><div class="detail" style="max-width:960px">
+    <div class="hero" style="padding:34px 0 0">
+      <h1 style="font-size:30px">管理员台账</h1>
+      <div class="seal" style="width:78px;height:78px;font-size:15px">拾光<br>管理</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat"><div class="num">${stats.users}</div><div class="lbl">注册用户</div></div>
+      <div class="stat o"><div class="num">${stats.lost}</div><div class="lbl">寻物启事</div></div>
+      <div class="stat g"><div class="num">${stats.found}</div><div class="lbl">招领启事</div></div>
+      <div class="stat"><div class="num">${stats.resolved}</div><div class="lbl">已找回</div></div>
+      <div class="stat"><div class="num">${stats.pendingClaims}</div><div class="lbl">待处理认领</div></div>
+      <div class="stat"><div class="num" style="color:${stats.bannedUsers ? 'var(--red)' : 'inherit'}">${stats.bannedUsers}</div><div class="lbl">封禁中</div></div>
+    </div>
+
+    <h3 class="section-t">待处理认领（${pendClaims.length}）</h3>
+    ${pendClaims.length ? pendClaims.map(c => `
+      <div class="claim-box">
+        <div class="line"><b>${esc(c.claimantName)}</b> 申请认领「${esc(c.postTitle)}」
+          <span class="claim-state pending">待核实</span></div>
+        <p class="ans">核实特征：${esc(c.answer)}</p>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn sm green" data-approve="${esc(c.id)}">✓ 通过</button>
+          <button class="btn sm danger" data-reject="${esc(c.id)}">拒绝</button>
+          <a class="mini" href="#/post/${esc(c.postId)}" style="align-self:center">看启事</a>
+        </div>
+      </div>`).join('') : '<div style="color:var(--ink-60);font-size:13.5px">没有积压的认领申请，很好。</div>'}
+
+    <h3 class="section-t">用户管理（${users.length}）</h3>
+    <table class="tbl"><thead><tr><th>用户</th><th>角色</th><th>状态</th><th>发帖</th><th>操作</th></tr></thead>
+    <tbody>${users.map(u => `
+      <tr>
+        <td><b>${esc(u.nickname)}</b>${u.studentId ? ' <span class="cert">已认证</span>' : ''}<br><span style="color:var(--ink-60);font-size:12px">@${esc(u.username)}</span></td>
+        <td>${u.role === 'admin' ? '<span class="tag-admin">管理员</span>' : '用户'}</td>
+        <td>${u.status === 'banned' ? '<span class="tag-banned">已封禁</span>' : '正常'}</td>
+        <td>${u.postCount}</td>
+        <td><div class="ops">
+          ${u.id !== me.id ? `
+            ${u.status === 'active' ? `<button class="mini warn" data-ban="${esc(u.id)}">封禁</button>` : `<button class="mini ok" data-unban="${esc(u.id)}">解封</button>`}
+            ${u.role === 'user' ? `<button class="mini" data-grant="${esc(u.id)}">设为管理员</button>` : `<button class="mini" data-revoke="${esc(u.id)}">撤销管理员</button>`}
+            ${u.role !== 'admin' ? `<button class="mini warn" data-delu="${esc(u.id)}">删除</button>` : ''}`
+          : '<span style="color:var(--ink-60);font-size:12px">（你自己）</span>'}
+        </div></td>
+      </tr>`).join('')}</tbody></table>
+  </div></div>`;
+
+  const act = (sel, fn) => $app.querySelectorAll(sel).forEach(b => b.onclick = () => fn(b));
+  act('[data-approve]', b => resolveClaim(b.dataset.approve, 'approve', viewAdmin));
+  act('[data-reject]', b => resolveClaim(b.dataset.reject, 'reject', viewAdmin));
+  act('[data-ban]', async b => {
+    if (!(await confirmBox('封禁用户', '确定吗？其将无法登录和发布。'))) return;
+    try { await api('PATCH', '/admin/users/' + b.dataset.ban, { status: 'banned' }); toast('已封禁'); viewAdmin(); } catch(e){ toast(e.message); }
+  });
+  act('[data-unban]', async b => {
+    try { await api('PATCH', '/admin/users/' + b.dataset.unban, { status: 'active' }); toast('已解封'); viewAdmin(); } catch(e){ toast(e.message); }
+  });
+  act('[data-grant]', async b => {
+    try { await api('PATCH', '/admin/users/' + b.dataset.grant, { role: 'admin' }); toast('已授权为管理员'); viewAdmin(); } catch(e){ toast(e.message); }
+  });
+  act('[data-revoke]', async b => {
+    try { await api('PATCH', '/admin/users/' + b.dataset.revoke, { role: 'user' }); toast('已撤销管理员'); viewAdmin(); } catch(e){ toast(e.message); }
+  });
+  act('[data-delu]', async b => {
+    if (!(await confirmBox('删除用户', '将同时删除其全部启事与评论，确定？'))) return;
+    try { await api('DELETE', '/admin/users/' + b.dataset.delu); toast('用户已删除'); viewAdmin(); } catch(e){ toast(e.message); }
+  });
+}
+
+/* ---------- 启动 ---------- */
+renderTop(); renderNav(); initDecor(); handleRoute();
+</script>
+</body>
+</html>

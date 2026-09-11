@@ -1,0 +1,13 @@
+{
+  "name": "shiguang-lost-found",
+  "version": "1.0.0",
+  "description": "拾光 · 校园失物招领平台（零依赖 Node 全栈：静态前端 + API 服务）",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,10 @@
+# Render 部署蓝图：https://render.com/docs/blueprint-spec
+# 在 Render 中选择 New -> Blueprint 并连接本仓库即可零配置部署
+services:
+  - type: web
+    name: shiguang-lost-found
+    runtime: node
+    plan: free
+    startCommand: node server.js
+    buildCommand: echo zero-dependency, skip build
+    healthCheckPath: /api/posts

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="oeI9bAoAhONXAXZ03SGZQ2">
+<head data-page-node-id="GlQ5KLDLQ8rBJuogKdvQbS">
+<meta charset="UTF-8" data-page-node-id="QEhr1cEjOpZAu89H7RJQVQ">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="2bVyllHkKefjzFIOnXdXXm">
+<title>拾光 · 校园失物招领平台 — 丢了的东西，也在偷偷找你</title>
+<meta name="description" content="拾光：校园失物招领平台。橙色寻物启事，绿色招领启事，贴一张启事，让每一件走失的物品回家。" data-page-node-id="zPmsmhXQGPzt6xNnOXuBDm">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FF7A45'/%3E%3Ctext x='32' y='44' font-size='34' font-family='serif' font-weight='900' text-anchor='middle' fill='%23FDF7F1'%3E拾%3C/text%3E%3C/svg%3E" data-page-node-id="mX6zKVy98HqoIhlWv6bMRO">
+<link rel="stylesheet" href="fonts/noto-serif-sc.css">
+<link rel="stylesheet" href="fonts/ma-shan-zheng.css">
+<script>
+/* 移动端分流兜底：手机 / 平板直接进入终稿应用（全功能，已适配移动端） */
+(function(){
+  var ua = navigator.userAgent || '';
+  var isMobile = /android|iphone|ipod|mobile|harmonyos/i.test(ua)
+    || /iPad/i.test(ua)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isMobile) location.replace('终稿.html' + (location.hash || ''));
+})();
+</script>
+<script>document.documentElement.classList.add('js');</script>
+<style>
+/* ============================================================
+   拾光 · 落地页 — 「校园公告板」编辑海报风
+   拾光橙 #FF7A45 (寻物) / 安心绿 #12B886 (招领) / 奶油纸 #FDF7F1
+   ============================================================ */
+:root{
+  --paper:   #FDF7F1;
+  --paper-2: #FFFDF9;
+  --ink:     #2B2118;
+  --ink-soft:#6B5D4F;
+  --line:    rgba(43,33,24,.16);
+  --orange:      #FF7A45;
+  --orange-deep: #E85F2B;
+  --orange-soft: rgba(255,122,69,.14);
+  --green:       #12B886;
+  --green-deep:  #0E9C71;
+  --green-soft:  rgba(18,184,134,.14);
+  --serif: "Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --sans:  "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --hand:  "Ma Shan Zheng","Kaiti SC","KaiTi",cursive;
+  --mono:  ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
+  --ease:  cubic-bezier(.22,1,.36,1);           /* ease-out-quint */
+  --shadow-hard: 6px 6px 0 var(--ink);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.7;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* 纸张颗粒 */
+body::after{
+  content:"";position:fixed;inset:0;z-index:90;pointer-events:none;
+  opacity:.05;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+}
+::selection{background:var(--orange);color:var(--paper-2)}
+a{color:inherit;text-decoration:none}
+img,svg{display:block}
+.wrap{width:min(1180px,92vw);margin-inline:auto}
+
+/* ---------- 滚动显现（无 JS 时内容始终可见） ---------- */
+.js [data-reveal]{opacity:0;transform:translateY(30px);
+  transition:opacity .8s var(--ease),transform .8s var(--ease);
+  transition-delay:var(--d,0s)}
+.js [data-reveal].in{opacity:1;transform:none}
+
+/* ---------- 按钮：硬阴影印刷风 ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:10px;
+  font:700 17px/1 var(--sans);letter-spacing:.02em;
+  padding:16px 28px;border-radius:8px;cursor:pointer;
+  border:2px solid var(--ink);
+  background:var(--orange);color:var(--ink);
+  box-shadow:var(--shadow-hard);
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease),background .18s;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink)}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn.green{background:var(--green)}
+.btn.ghost{background:var(--paper-2)}
+.btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.btn.sm{padding:11px 20px;font-size:15px}
+
+/* ---------- 印章 ---------- */
+.stamp{
+  position:absolute;display:grid;place-items:center;text-align:center;
+  border-radius:50%;font-family:var(--serif);font-weight:900;
+  mix-blend-mode:multiply;pointer-events:none;
+  transform:rotate(-14deg);
+  opacity:.92;
+}
+.stamp::before{content:"";position:absolute;inset:5px;border-radius:50%;border:1.5px solid currentColor;opacity:.75}
+.stamp b{display:block;font-size:inherit;line-height:1.15;letter-spacing:.12em}
+.stamp i{display:block;font-style:normal;font-family:var(--mono);font-size:.3em;letter-spacing:.28em;margin-top:4px;opacity:.85}
+.stamp.green{color:var(--green-deep)}
+.stamp.orange{color:var(--orange-deep)}
+.in .stamp{animation:stamp-in .45s cubic-bezier(.2,.9,.3,1.15) forwards;animation-delay:var(--sd,.55s)}
+@keyframes stamp-in{
+  0%{opacity:0;transform:rotate(-4deg) scale(2.1)}
+  70%{opacity:.95;transform:rotate(-15deg) scale(.94)}
+  100%{opacity:.92;transform:rotate(-14deg) scale(1)}
+}
+
+/* ---------- 胶带 ---------- */
+.tape{
+  position:absolute;top:-13px;left:50%;width:96px;height:26px;
+  transform:translateX(-50%) rotate(-4deg);
+  background:repeating-linear-gradient(-45deg,rgba(255,122,69,.30) 0 7px,rgba(255,122,69,.20) 7px 14px);
+  box-shadow:0 1px 2px rgba(43,33,24,.12);
+}
+.tape.green{background:repeating-linear-gradient(-45deg,rgba(18,184,134,.30) 0 7px,rgba(18,184,134,.20) 7px 14px)}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:sticky;top:0;z-index:80;
+  background:var(--paper);
+  border-bottom:2px solid var(--ink);
+}
+.topbar .wrap{display:flex;align-items:center;gap:28px;height:66px}
+.logo{display:flex;align-items:center;gap:11px;font-family:var(--serif)}
+.logo .mark{
+  width:38px;height:38px;border-radius:9px;background:var(--orange);
+  border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+  display:grid;place-items:center;
+  font-weight:900;font-size:20px;color:var(--paper-2);
+}
+.logo b{font-size:21px;font-weight:900;letter-spacing:.06em}
+.logo small{font-size:11px;color:var(--ink-soft);letter-spacing:.22em;display:block;line-height:1.2}
+.nav{display:flex;gap:26px;margin-left:auto;font-size:15px;font-weight:500}
+.nav a{position:relative;padding:4px 0;color:var(--ink-soft);transition:color .2s}
+.nav a:hover{color:var(--ink)}
+.nav a::after{content:"";position:absolute;left:0;right:100%;bottom:0;height:2px;background:var(--orange);transition:right .25s var(--ease)}
+.nav a:hover::after{right:0}
+.topbar .btn{margin-left:6px}
+
+/* ---------- HERO ---------- */
+.hero{position:relative;overflow:hidden;padding:clamp(64px,9vw,128px) 0 clamp(72px,9vw,120px)}
+.hero-bg{
+  position:absolute;right:-3%;top:-4%;z-index:0;pointer-events:none;user-select:none;
+  font-family:var(--serif);font-weight:900;
+  font-size:clamp(220px,32vw,470px);line-height:1;
+  color:transparent;-webkit-text-stroke:2px rgba(232,95,43,.10);
+  transform:rotate(6deg);
+}
+@supports not (-webkit-text-stroke:1px black){.hero-bg{color:rgba(255,122,69,.07)}}
+.hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr .92fr;gap:clamp(32px,4.5vw,56px);align-items:center}
+.kicker{
+  display:inline-flex;align-items:center;gap:10px;
+  font:700 13px/1 var(--mono);letter-spacing:.28em;color:var(--ink-soft);
+  border:1.5px solid var(--line);border-radius:999px;padding:9px 16px;
+  background:var(--paper-2);margin-bottom:clamp(22px,3vw,34px);
+}
+.kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:blink 2.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+h1{
+  font-family:var(--serif);font-weight:900;
+  font-size:clamp(40px,6.8vw,88px);line-height:1.14;letter-spacing:.01em;
+}
+h1 .t-lose{display:inline-block;transform:rotate(-8deg) translateY(.05em)}
+.hl{position:relative;display:inline-block;font-style:normal;color:var(--orange-deep)}
+.ring{position:absolute;inset:-14% -9% -18% -9%;width:118%;height:132%;overflow:visible;pointer-events:none}
+.ring path{fill:none;stroke:var(--orange);stroke-width:5;stroke-linecap:round;
+  stroke-dasharray:480;stroke-dashoffset:0}
+.js .ring path{stroke-dashoffset:480}
+.js .drawn .ring path{animation:draw 1.1s cubic-bezier(.55,0,.25,1) .55s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero-sub{
+  margin-top:clamp(20px,2.6vw,30px);max-width:34em;
+  font-size:clamp(16px,1.5vw,19px);color:var(--ink-soft);
+}
+.hero-sub b{color:var(--orange-deep);font-weight:700}
+.hero-sub i.b{color:var(--green-deep);font-style:normal;font-weight:700}
+.hero-cta{display:flex;flex-wrap:wrap;gap:16px;margin-top:clamp(28px,3.4vw,42px)}
+.hero-meta{
+  display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:clamp(22px,2.6vw,30px);
+  font:500 13px/1.6 var(--sans);color:var(--ink-soft);
+}
+.hero-meta span{display:inline-flex;align-items:center;gap:7px}
+.hero-meta svg{width:14px;height:14px;stroke:var(--green-deep);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+/* --- 英雄区海报 --- */
+.stage{position:relative;min-height:540px}
+.poster{
+  position:absolute;width:265px;
+  border:2px solid var(--ink);border-radius:6px;
+  background:var(--paper-2);
+  box-shadow:9px 9px 0 rgba(43,33,24,.88);
+  transition:box-shadow .3s var(--ease);
+}
+.poster:hover{box-shadow:12px 13px 0 rgba(43,33,24,.88)}
+.poster .bob{animation:bob var(--bt,5.5s) ease-in-out var(--bd,0s) infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-11px)}}
+.poster.a{--r:-4deg;left:0;top:6px;transform:rotate(var(--r));z-index:2}
+.poster.b{--r:2.6deg;right:0;top:196px;transform:rotate(var(--r));z-index:3}
+.phead{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:11px 16px;border-bottom:2px solid var(--ink);
+  border-radius:4px 4px 0 0;color:var(--paper-2);
+  font-family:var(--serif);font-weight:900;font-size:16px;letter-spacing:.34em;text-indent:.34em;
+}
+.poster.a .phead{background:var(--orange)}
+.poster.b .phead{background:var(--green)}
+.tno{font:500 10px/1 var(--mono);letter-spacing:.05em;opacity:.85}
+.pic{display:grid;place-items:center;padding:22px 16px 10px}
+.pic svg{width:74px;height:74px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.poster h3{font-family:var(--serif);font-weight:900;font-size:22px;text-align:center;letter-spacing:.04em}
+.prows{padding:14px 20px 6px}
+.prow{display:flex;gap:12px;padding:7px 0;border-bottom:1.5px dashed var(--line);font-size:13.5px}
+.prow dt{color:var(--ink-soft);flex:0 0 3em;font-weight:500}
+.prow dd{font-weight:600}
+.hand{font-family:var(--hand);font-size:19px;text-align:center;color:var(--orange-deep);padding:12px 18px 18px;transform:rotate(-1.2deg)}
+.poster.b .hand{color:var(--green-deep)}
+.poster .stamp{width:96px;height:96px;font-size:19px}
+.poster.a .stamp{right:-16px;top:72px}
+.poster.b .stamp{right:-14px;top:58px}
+.stage-note{
+  position:absolute;left:8px;bottom:6px;z-index:4;
+  font:500 11px/1.7 var(--mono);color:var(--ink-soft);letter-spacing:.1em;
+  border-left:3px solid var(--orange);padding-left:10px;
+}
+
+/* ---------- 跑马灯公告条 ---------- */
+.ticker{
+  background:var(--ink);color:var(--paper);
+  border-block:2px solid var(--ink);
+  overflow:hidden;white-space:nowrap;
+}
+.ticker-track{display:inline-flex;align-items:center;padding:13px 0;animation:marquee 38s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+@keyframes marquee{to{transform:translateX(-50%)}}
+.ticker ul{display:inline-flex;align-items:center;list-style:none}
+.ticker li{display:inline-flex;align-items:center;gap:9px;padding:0 26px;font-size:14.5px;font-weight:500}
+.ticker li .st{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.ticker li .st.o{background:var(--orange)}
+.ticker li .st.g{background:var(--green)}
+.ticker li b{font-weight:700;color:var(--paper-2)}
+.ticker li span{color:rgba(253,247,241,.62)}
+.ticker li::after{content:"✦";margin-left:26px;color:var(--orange);font-size:12px}
+
+/* ---------- 通用节 ---------- */
+section{padding:clamp(84px,11vw,150px) 0}
+.sec-kicker{
+  display:inline-flex;align-items:center;gap:12px;
+  font:700 13px/1 var(--mono);letter-spacing:.3em;color:var(--ink-soft);margin-bottom:20px;
+}
+.sec-kicker::before{content:"";width:34px;height:3px;background:var(--orange)}
+h2{font-family:var(--serif);font-weight:900;font-size:clamp(32px,4.6vw,62px);line-height:1.2;letter-spacing:.01em}
+h2 em{font-style:normal;color:var(--orange-deep)}
+h2 em.g{color:var(--green-deep)}
+.sec-sub{margin-top:16px;color:var(--ink-soft);font-size:clamp(15px,1.4vw,17.5px);max-width:36em}
+
+/* ---------- 三步 ---------- */
+.how{background:var(--paper)}
+.step{
+  display:grid;grid-template-columns:auto 1fr;gap:clamp(18px,4vw,54px);align-items:start;
+  max-width:880px;padding:clamp(30px,4vw,48px) 0;
+  border-bottom:2px dashed var(--line);
+}
+.step:last-of-type{border-bottom:none}
+.step:nth-of-type(2){margin-left:clamp(0px,7vw,110px)}
+.step:nth-of-type(3){margin-left:clamp(0px,14vw,220px)}
+.num{
+  font-family:var(--serif);font-weight:900;line-height:.85;
+  font-size:clamp(72px,9vw,138px);
+  color:transparent;-webkit-text-stroke:2px rgba(43,33,24,.4);
+}
+@supports not (-webkit-text-stroke:1px black){.num{color:rgba(43,33,24,.16)}}
+.step:nth-of-type(2) .num{-webkit-text-stroke-color:rgba(232,95,43,.6)}
+.step:nth-of-type(3) .num{-webkit-text-stroke-color:rgba(14,156,113,.6)}
+.step h3{font-family:var(--serif);font-weight:900;font-size:clamp(21px,2.3vw,28px);margin-bottom:10px}
+.step h3 small{font:600 12px/1 var(--mono);letter-spacing:.22em;color:var(--ink-soft);margin-left:14px}
+.step p{color:var(--ink-soft);max-width:34em;font-size:clamp(15px,1.3vw,16.5px)}
+.step p b{color:var(--ink)}
+.step:nth-of-type(2) p b{color:var(--orange-deep)}
+.step:nth-of-type(3) p b{color:var(--green-deep)}
+
+/* ---------- 双入口对撞 ---------- */
+.split{padding:0}
+.split-grid{display:grid;grid-template-columns:1fr 1fr;position:relative}
+.panel{
+  padding:clamp(70px,9vw,130px) clamp(26px,6vw,90px) clamp(70px,9vw,120px);
+  color:var(--ink);
+}
+.panel.orange{background:linear-gradient(160deg,var(--orange) 0%,var(--orange-deep) 100%)}
+.panel.green{background:linear-gradient(160deg,var(--green) 0%,var(--green-deep) 100%)}
+.plabel{
+  display:inline-block;font-family:var(--serif);font-weight:900;font-size:14px;letter-spacing:.4em;text-indent:.4em;
+  border:2px solid var(--ink);border-radius:999px;padding:8px 18px;background:var(--paper-2);
+  box-shadow:3px 3px 0 var(--ink);margin-bottom:clamp(24px,3vw,38px);
+}
+.panel h3{font-family:var(--serif);font-weight:900;font-size:clamp(28px,3.6vw,48px);line-height:1.25}
+.panel ul{list-style:none;margin:clamp(20px,2.6vw,30px) 0 clamp(28px,3.4vw,42px)}
+.panel li{display:flex;gap:12px;align-items:flex-start;padding:9px 0;font-size:clamp(15px,1.4vw,17px);font-weight:500}
+.panel li svg{flex:0 0 auto;width:20px;height:20px;margin-top:4px;stroke:var(--ink);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.panel .btn{background:var(--paper-2)}
+.vs{
+  position:absolute;left:50%;top:50%;z-index:5;transform:translate(-50%,-50%) rotate(-8deg);
+  width:92px;height:92px;border-radius:50%;
+  background:var(--paper);border:2.5px solid var(--ink);box-shadow:5px 5px 0 var(--ink);
+  display:grid;place-items:center;
+  font-family:var(--serif);font-weight:900;font-size:40px;color:var(--orange-deep);
+}
+
+/* ---------- 公告板墙 ---------- */
+.board{position:relative}
+.board-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:clamp(40px,5vw,64px)}
+.board-date{font:500 13px/1 var(--mono);color:var(--ink-soft);letter-spacing:.12em}
+.wall{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));
+  gap:clamp(22px,3vw,34px);
+}
+.wcard{
+  position:relative;background:var(--paper-2);
+  border:2px solid var(--ink);border-radius:6px;
+  box-shadow:6px 6px 0 rgba(43,33,24,.9);
+  padding:26px 24px 24px;
+  transform:rotate(var(--wr,0deg));
+  transition:transform .3s var(--ease),box-shadow .3s var(--ease);
+}
+.wcard:nth-child(odd){--wr:-1.4deg}
+.wcard:nth-child(even){--wr:1.6deg}
+.wcard:nth-child(3n){--wr:-.8deg}
+.wcard:hover{transform:rotate(0deg) translateY(-8px);box-shadow:9px 11px 0 rgba(43,33,24,.9)}
+.wcard .tape{width:82px;height:22px}
+.wtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.chip{
+  font:700 12px/1 var(--sans);letter-spacing:.18em;text-indent:.18em;
+  border:1.5px solid var(--ink);border-radius:999px;padding:5px 12px;
+}
+.chip.orange{background:var(--orange-soft);color:var(--orange-deep)}
+.chip.green{background:var(--green-soft);color:var(--green-deep)}
+.wcard h3{font-family:var(--serif);font-weight:900;font-size:21px;letter-spacing:.02em}
+.wmeta{margin-top:8px;font-size:13.5px;color:var(--ink-soft);display:flex;align-items:center;gap:7px}
+.wmeta svg{width:14px;height:14px;stroke:var(--ink-soft);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.wfoot{margin-top:16px;padding-top:13px;border-top:1.5px dashed var(--line);display:flex;justify-content:space-between;align-items:center}
+.wfoot .tno{color:var(--ink-soft);opacity:1}
+.wback{font-family:var(--hand);font-size:16px;color:var(--green-deep)}
+.wcard h3,.wcard .wmeta{padding-right:64px}
+.wcard .stamp{animation-delay:.35s;right:auto;top:auto}
+.stamp.mini{width:66px;height:66px;font-size:14px;transform:rotate(12deg)}
+.wcard .stamp.mini{position:absolute;right:18px;top:56px}
+.board-more{margin-top:clamp(40px,5vw,56px);text-align:center}
+
+/* ---------- 归还故事 ---------- */
+.stories{border-top:2px solid var(--ink)}
+.quote{max-width:900px;padding:clamp(34px,4.4vw,56px) 0;border-bottom:2px dashed var(--line)}
+.quote:nth-of-type(even){margin-left:auto;text-align:right}
+.quote:last-of-type{border-bottom:none}
+.quote blockquote{
+  font-family:var(--serif);font-weight:700;
+  font-size:clamp(21px,2.8vw,34px);line-height:1.55;letter-spacing:.01em;
+}
+.quote blockquote::before{content:"「";color:var(--orange);font-weight:900}
+.quote blockquote::after{content:"」";color:var(--orange);font-weight:900}
+.quote:nth-of-type(even) blockquote::before{color:var(--green)}
+.quote:nth-of-type(even) blockquote::after{color:var(--green)}
+.quote figcaption{
+  margin-top:16px;font:500 13px/1.8 var(--mono);color:var(--ink-soft);letter-spacing:.08em;
+}
+.quote figcaption b{color:var(--ink)}
+
+/* ---------- 终章 CTA ---------- */
+.finale{background:var(--ink);color:var(--paper);position:relative;overflow:hidden}
+.finale .hero-bg{-webkit-text-stroke-color:rgba(253,247,241,.07);right:auto;left:-2%;top:auto;bottom:-10%}
+.finale .wrap{position:relative;z-index:1;text-align:center}
+.finale .sec-kicker{justify-content:center;color:rgba(253,247,241,.55)}
+.finale .sec-kicker::before{background:var(--orange)}
+.finale h2{font-size:clamp(38px,6vw,84px)}
+.finale h2 em{color:var(--orange)}
+.finale .sec-sub{margin-inline:auto;color:rgba(253,247,241,.66)}
+.finale-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:clamp(34px,4vw,52px)}
+.finale .btn{box-shadow:6px 6px 0 rgba(253,247,241,.92)}
+.finale .btn:hover{box-shadow:9px 9px 0 rgba(253,247,241,.92)}
+.finale .btn:active{box-shadow:2px 2px 0 rgba(253,247,241,.92)}
+.finale .btn.ghost{background:transparent;color:var(--paper);border-color:var(--paper)}
+.finale .link-preview{
+  display:inline-block;margin-top:26px;font:500 14px/1 var(--sans);
+  color:rgba(253,247,241,.6);border-bottom:1.5px dashed rgba(253,247,241,.4);padding-bottom:4px;
+  transition:color .2s,border-color .2s;
+}
+.finale .link-preview:hover{color:var(--orange);border-color:var(--orange)}
+
+/* ---------- 页脚 ---------- */
+footer{
+  background:var(--ink);color:rgba(253,247,241,.55);
+  border-top:1.5px dashed rgba(253,247,241,.25);
+  padding:34px 0;font-size:13px;
+}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px 30px;align-items:center;justify-content:space-between}
+footer .flogo{font-family:var(--serif);font-weight:900;color:var(--paper);font-size:17px;letter-spacing:.08em}
+footer nav{display:flex;gap:20px}
+footer a:hover{color:var(--orange)}
+footer .tech{font-family:var(--mono);letter-spacing:.06em;font-size:11.5px}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:960px){
+  .hero .wrap{grid-template-columns:1fr}
+  .stage{min-height:0;display:flex;flex-wrap:wrap;gap:26px;justify-content:center;margin-top:14px}
+  .poster{position:static;width:min(330px,86%)}
+  .poster.a{transform:rotate(-2.2deg)}
+  .poster.b{transform:rotate(2deg);top:0}
+  .stage-note{position:static;width:100%;text-align:center;border-left:none;padding-left:0}
+  .vs{width:72px;height:72px;font-size:30px}
+}
+@media (max-width:760px){
+  .nav{display:none}
+  .topbar .btn{margin-left:auto}
+  .split-grid{grid-template-columns:1fr}
+  .vs{display:none}
+  .step:nth-of-type(2),.step:nth-of-type(3){margin-left:0}
+  .quote:nth-of-type(even){text-align:left}
+}
+/* ---------- 动效关怀 ---------- */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .js [data-reveal]{opacity:1;transform:none}
+  .stamp{opacity:.92;transform:rotate(-14deg)}
+  .js .ring path{stroke-dashoffset:0}
+}
+</style>
+</head>
+<body data-page-node-id="FFE9arj8BLeIxfX9BC8zJJ">
+
+<!-- ============ 顶栏 ============ -->
+<header class="topbar" data-page-node-id="nrJI2MBYGAGGfGNFBrkOPv">
+  <div class="wrap" data-page-node-id="9ScbEk557tWxMowXN3ZXl9">
+    <a class="logo" href="#" aria-label="拾光首页" data-page-node-id="KyNheD68UUOdvOZdpSwRRW">
+      <span class="mark" aria-hidden="true" data-page-node-id="ueIKw2e9GvMCti90DtRoFd">拾</span>
+      <span data-page-node-id="GPB2D02EqH9syu9MDwLDPa"><b data-page-node-id="ffCz8XX16GP5E6PXqQfWBx">拾光</b><small data-page-node-id="vX5rFet8kEjyAwdEgFMImY">SHIGUANG</small></span>
+    </a>
+    <nav class="nav" aria-label="页面导航" data-page-node-id="MixUaiITD28Sr6tHpsciOt">
+      <a href="#how" data-page-node-id="6ymNFDo2QBDLSjEfkho5rM">怎么用</a>
+      <a href="#split" data-page-node-id="stguq2L4j6yCuIXH8MesvV">两个入口</a>
+      <a href="#board" data-page-node-id="XFsxL6tmHuuwelDHcEXUkh">公告板</a>
+      <a href="#story" data-page-node-id="zat8my89mShW4TgCCYReWZ">归还故事</a>
+    </nav>
+    <a class="btn sm" href="终稿.html#/publish" data-page-node-id="kb0oc35nJ6Jur0RqVyRWc7">
+      发布启事
+      <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="Qg23MCpgVGmcjLeU5FAhAW"><path d="M5 12h14M13 6l6 6-6 6" data-page-node-id="9bFwSVukBSFFaNcQF82CVh"/></svg>
+    </a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero" data-page-node-id="cZueyNvOJDDVIAA3ANB3QU">
+  <div class="hero-bg" aria-hidden="true" data-page-node-id="XGds80Sd0h1Z1aZ02T0IZw">拾</div>
+  <div class="wrap" data-page-node-id="CF2bZe3anwNMmlm4FLAPM0">
+    <div data-page-node-id="3CcFoTbeMeqd3NF3a8Pl37">
+      <p class="kicker" data-reveal data-page-node-id="tpEHeWK5WegHMEthk8SooN"><span class="dot" aria-hidden="true" data-page-node-id="LrW6sBQAtzQEtGWNAqdLIH"></span>校园失物招领平台 · 拾光</p>
+      <h1 data-reveal style="--d:.08s" data-page-node-id="iMmsANKhAIW4T9DXEmJPqe">
+        <span class="t-lose" data-page-node-id="IbjcAWCxauSIRi6VKAFF7p">丢</span>了的东西，<br data-page-node-id="ze0t0RHY6oWIk75LDUDHTB">
+        也在偷偷<br data-page-node-id="I8NGpkTmYwIVJNw0OSDGxA">
+        <em class="hl" id="hlWord" data-page-node-id="HicelIon6jQM7rUBwYTmcy">找你<svg class="ring" viewBox="0 0 220 90" preserveAspectRatio="none" aria-hidden="true" data-page-node-id="zCH3He0IR98iXTvlSaJ4El"><path d="M16 46 C 44 10, 178 4, 204 34 C 220 54, 168 80, 96 81 C 42 82, 6 68, 18 40" data-page-node-id="w7XwQmbZDBfiAVrTb0NB8X"/></svg></em>
+      </h1>
+      <p class="hero-sub" data-reveal style="--d:.16s" data-page-node-id="U0HJaEVgoYo155D30vH6kf">
+        在校园里丢了东西别慌，捡到了别人的宝贝别扔——
+        贴一张启事，<b data-page-node-id="V53g242TWnBSbbgejBjCJo">橙色寻物</b>、<i class="b" data-page-node-id="64KrCO83ycToCOjvwjyHWr">绿色招领</i>，
+        剩下的，交给整个校园。
+      </p>
+      <div class="hero-cta" data-reveal style="--d:.24s" data-page-node-id="vf7QxU37o1225YFZBbsbh3">
+        <a class="btn" href="终稿.html#/publish" data-page-node-id="hDJMgWAOkThdSYYQ7AOBwx">
+          <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="jDeU8leJJJBfYyC4oPrH5A"><circle cx="10.5" cy="10.5" r="6.5" data-page-node-id="ysZWz0FHamAf6Nc3FMvGK2"/><path d="M15.5 15.5 21 21" data-page-node-id="SsOnmTZ9GUT0ICcuqlHZw9"/></svg>
+          我丢了东西
+        </a>
+        <a class="btn green" href="终稿.html#/publish" data-page-node-id="uErJNXAIPtc7lWtzKZpp76">
+          <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="km156UG8238m5t5OALOXuD"><path d="M12 21s-7.5-4.6-7.5-10A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7.5 4c0 5.4-7.5 10-7.5 10z" data-page-node-id="0ZX4AHciuBT72Odimgal93"/></svg>
+          我捡到了东西
+        </a>
+      </div>
+      <p class="hero-meta" data-reveal style="--d:.32s" data-page-node-id="psTCGk55sB5VK1TRoMdlwe">
+        <span data-page-node-id="D79RAkHhu55xcQdw3dSHpB"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="EQi5aIGkyNNvqS4KkUapL8"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="5WgYUFQyAqxMHbQGvoXDxX"/></svg>免费使用</span>
+        <span data-page-node-id="lJEG9HJDIgPuqgZI0ejoA2"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="CRivqTFSqsgpPnQfxAw9xR"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="HQC1wdpeG52HhEyyXWIlX1"/></svg>本校认证</span>
+        <span data-page-node-id="DGfXRXxUxxJE5jjn4UO4dl"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="Uo2GZdGurnmzrbNBFWUsil"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="QWTnSpanA35ICsAlBieywa"/></svg>平均 26 小时物归原主</span>
+      </p>
+    </div>
+
+    <!-- 公告板上的两张启事 -->
+    <div class="stage" data-reveal style="--d:.2s" data-page-node-id="jDqujuBxvzVlFZWlDctBvu">
+      <article class="poster a" id="posterA" data-page-node-id="MBbTah5Zo8MlHEodZXqDPu">
+        <div class="bob" style="--bt:5.2s" data-page-node-id="6Ypgjwd8feyrqCVFsoSrxn">
+          <div class="card-inner" data-page-node-id="lfuOHHLE4bdWAISnezhf5V">
+            <span class="tape" aria-hidden="true" data-page-node-id="lPC5TeDJGwAVWCcPX2Ttlq"></span>
+            <header class="phead" data-page-node-id="fDyn3RjtNdJ5KP0sWdatSc"><span data-page-node-id="HPrlKC6pjXhEKaZ8cSDv6j">寻物启事</span><span class="tno" data-page-node-id="0DGw4ICC3CeIqH2eGOJEm5">NO.2026-0911-0042</span></header>
+            <div class="pic" data-page-node-id="A1vMrCzYG0ExDiopn2FXZ7">
+              <svg viewBox="0 0 64 64" aria-hidden="true" data-page-node-id="B2PFipBkkxSbbbj3TapZAw">
+                <rect x="8" y="14" width="48" height="36" rx="4" data-page-node-id="2tZFsriQjr4tlUtM55o5ZN"/>
+                <circle cx="24" cy="30" r="6" data-page-node-id="0q7ktdAnSOTRlACyBxXF2E"/>
+                <path d="M16 44c1.5-5 14.5-5 16 0M38 26h14M38 34h14M38 42h9" data-page-node-id="Iwij1fGlAAy6DY6d90EBXn"/>
+              </svg>
+            </div>
+            <h3 data-page-node-id="xA67qUFQjcYXLh5PwaWHfq">银色学生证</h3>
+            <dl class="prows" data-page-node-id="nu3otVjoTCThpFo0lFojcH">
+              <div class="prow" data-page-node-id="70d9jsPU1a2FLFxH1uB23p"><dt data-page-node-id="iPYf2N5TQALHQwKV1aNXF4">地点</dt><dd data-page-node-id="47NzEnAtlnD2ixuwUGUA0G">图书馆三楼自习区</dd></div>
+              <div class="prow" data-page-node-id="Gs8E322T6EvHcdvylV0DFa"><dt data-page-node-id="rga5JNrY7WrHoH2BFffO0D">时间</dt><dd data-page-node-id="VOQb0CpMaaR5ahc12JucvB">9月9日 下午</dd></div>
+            </dl>
+            <p class="hand" data-page-node-id="mxmTL3YJJrucCqIppHsr34">对上暗号「周杰伦」，必有谢礼。</p>
+            <span class="stamp orange" style="--sd:.75s" data-page-node-id="iifzSsOJOK6kCBHfk04kwV"><span data-page-node-id="5pwY4HYTb6pOp90uAqkVaU"><b data-page-node-id="qCsZs6wDBZI7AWy7P6QaMK">寻找中</b><i data-page-node-id="kOkNTcBbm6snP6xV1usZKX">SHIGUANG</i></span></span>
+          </div>
+        </div>
+      </article>
+
+      <article class="poster b" id="posterB" data-page-node-id="ohONa8d2XRjj4AAhLANbwA">
+        <div class="bob" style="--bt:6.4s;--bd:-2.4s" data-page-node-id="ry7iMFztw8YAHnNCrmDMkC">
+          <div class="card-inner" data-page-node-id="433AHeerMH86zSGvtCOtB5">
+            <span class="tape green" aria-hidden="true" data-page-node-id="cW3EWoJHJYdhv0AzHOpzPp"></span>
+            <header class="phead" data-page-node-id="xJI8t10WV65Dy0Gkvbd3fk"><span data-page-node-id="XHNQciZD02XSZaoUeEkxHQ">招领启事</span><span class="tno" data-page-node-id="s0sr7xO8buD1iAw4A9PCIr">NO.2026-0910-0133</span></header>
+            <div class="pic" data-page-node-id="f0AozYbUAIxnQLfg8klyNA">
+              <svg viewBox="0 0 64 64" aria-hidden="true" data-page-node-id="c4IoB4WuvneECmrf7xXqno">
+                <path d="M18 18h28v8H18zM20 26h24v20a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4z" data-page-node-id="YYYuRLiwVQIU1HejPTGUzp"/>
+                <path d="M44 30h4a6 6 0 0 1 0 12h-4M26 36c2 2 4 2 6 0s4-2 6 0" data-page-node-id="9RSCju8D17c6B7e6LHKvbA"/>
+              </svg>
+            </div>
+            <h3 data-page-node-id="DMHehnmWMr4FrCOqC1fYCr">黑色保温杯</h3>
+            <dl class="prows" data-page-node-id="gcnDFRR4UAesuabyRKJOvA">
+              <div class="prow" data-page-node-id="veYcTvESDVDPSOkUHXUmaZ"><dt data-page-node-id="79jjAzuFmv71hnAgqmrP56">地点</dt><dd data-page-node-id="ZCDc3Es0E9bkz5Y3gv0Pfi">二食堂二楼</dd></div>
+              <div class="prow" data-page-node-id="7t3ZjtL0IDUElF4rbeccdB"><dt data-page-node-id="bXsOWGd1wELm8yatC21H4X">时间</dt><dd data-page-node-id="7BgVeW7Qj13wU7N10CYWcH">9月10日 午间</dd></div>
+            </dl>
+            <p class="hand" data-page-node-id="QI4ofjFE9BBagLHUa463Dr">杯底有小划痕，主人来认领呀。</p>
+            <span class="stamp green" style="--sd:.95s" data-page-node-id="zOrbtTkmzgTFDOzpip3BPC"><span data-page-node-id="YaTK0qQaH3Z3CAQoxs0S0L"><b data-page-node-id="bXzRMK1qCC41H0tPHsKrTt">已找到</b><i data-page-node-id="lzCKDyytV4La68a0yA6kz9">09.10</i></span></span>
+          </div>
+        </div>
+      </article>
+
+      <p class="stage-note" data-page-node-id="6K2Lawmtk76Nz86XOpnYYo">— 摘自拾光公告板 · 真实快照数据</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 跑马灯 ============ -->
+<div class="ticker" aria-label="最新启事滚动条" data-page-node-id="3XV6kWRP0U2NUiA0gkwK6E">
+  <div class="ticker-track" data-page-node-id="Ce5H2yXnXx6ifJSpUcCEio">
+    <ul data-page-node-id="UNWBHHlmuDXaO035dvmRp5">
+      <li data-page-node-id="IubbCTejUbxO6yY3mnCPcx"><span class="st o" data-page-node-id="f3ZBxiL6801Hbvh0XTD5B4"></span><b data-page-node-id="DFr7igzxq8sTR5RHCRvNRm">一串钥匙</b><span data-page-node-id="xW2dPySSxWNb59nWaVfHOU">紫荆操场西看台</span></li>
+      <li data-page-node-id="0dAMTlO88wh1BwCeiuEyIA"><span class="st g" data-page-node-id="lJHqcUL1APpXYiRzhPxfyb"></span><b data-page-node-id="2ETUPKvoiLxvi58R2ApKsC">灰色英短「团团」</b><span data-page-node-id="vFXo2dSQD4NUdJKv1hEWD2">东十二宿舍楼下 · 已找到</span></li>
+      <li data-page-node-id="duxGaKxlQ7VYOsYgQnhTBj"><span class="st o" data-page-node-id="nACtFNpW9ewbh52CGGX5zD"></span><b data-page-node-id="Eha1zHNEey0Kf9Re4P6j9i">AirPods Pro</b><span data-page-node-id="XfIgBPneT5y9oJLDEymARy">三教 402</span></li>
+      <li data-page-node-id="0lCfbOaAc4X5YMBjCtz9FH"><span class="st g" data-page-node-id="UeKN4QDQtm62qxy5rsZauy"></span><b data-page-node-id="jMWvdo8XzNRlS1C8GQTs8f">高等数学（上）</b><span data-page-node-id="POPDzU8wDddhKK9XtbZiTS">图书馆四楼北侧 · 已找到</span></li>
+      <li data-page-node-id="NKsGKG5SbJBiGecC4s6aSy"><span class="st o" data-page-node-id="CTk0iTE1qo0PWIDT9V2IJA"></span><b data-page-node-id="pHDVDnYktmOswTCJ5DAuJW">黑色保温杯</b><span data-page-node-id="erpFbTSaGermi99e2hNsB7">二食堂二楼</span></li>
+      <li data-page-node-id="QcyBgxDxSQ7DExiPUTUvl7"><span class="st g" data-page-node-id="h0t8eFn8FQwMDImb2BrfOs"></span><b data-page-node-id="AJACoColAGxpfwEDS9XyU7">蓝色长柄伞</b><span data-page-node-id="0Vh5NNAxrAaL1hALcX5iCA">体育馆正门 · 已找到</span></li>
+      <li data-page-node-id="7DsPh0fOFhpj8inSVpBqFF"><span class="st g" data-page-node-id="wFnqYfMz7dBn5vBFLP9zZB"></span><b data-page-node-id="svsdbcNuSHzXwvzyw6RgHX">校园卡</b><span data-page-node-id="NZYpOotMCqdDsWXsSgXEDI">一食堂一层 · 已找到</span></li>
+      <li data-page-node-id="xbCSZBMed6SYJss5N9xENJ"><span class="st o" data-page-node-id="8NsxJpWKgHF63GLRF68UU8"></span><b data-page-node-id="AOuolckPo7nlWLNLCyz7M5">银色学生证</b><span data-page-node-id="Lr2oAZJl0x580ayytDMxrM">图书馆三楼</span></li>
+    </ul>
+    <ul aria-hidden="true" data-page-node-id="HUjQ647hkCkgKYsg6g5ak2">
+      <li data-page-node-id="YhmGng7953Ma4cIF7sMFIG"><span class="st o" data-page-node-id="6LQgehjoHT06nqM9JH8hDl"></span><b data-page-node-id="TaHRY3Q9jJD9WCqhxfQZ0p">一串钥匙</b><span data-page-node-id="pGQTA12mwj8bArlmWon5CH">紫荆操场西看台</span></li>
+      <li data-page-node-id="A1bFt8xYAvskahyMKX2nvM"><span class="st g" data-page-node-id="tX3bvLfPdKUeYyxnLxnalP"></span><b data-page-node-id="c1IRfVjhBn3NXJIMcuNQ6p">灰色英短「团团」</b><span data-page-node-id="dQ3xPmAn17txGIT4zp9GyE">东十二宿舍楼下 · 已找到</span></li>
+      <li data-page-node-id="ZjBVjC77dw5Xo9OjVDQRhp"><span class="st o" data-page-node-id="SXSpSiOCYWODWFrTCGMhDw"></span><b data-page-node-id="W2CzIXy1gCbBwJbXD0CoXn">AirPods Pro</b><span data-page-node-id="JwlMAvDBMYHpWKxNrfWwEh">三教 402</span></li>
+      <li data-page-node-id="fowUggxohIHrhCWTCdl3Go"><span class="st g" data-page-node-id="CYnhYsC55VEmgn7DLce5z1"></span><b data-page-node-id="oKR5N7AEvCBiZ5VmfqpEXh">高等数学（上）</b><span data-page-node-id="8iN5ocbNT9nYxSRUHjaYhr">图书馆四楼北侧 · 已找到</span></li>
+      <li data-page-node-id="mKoBHpXIFXVn4BFBBOlBC3"><span class="st o" data-page-node-id="2Efn7cGbc8iDHGY4Zdx8sE"></span><b data-page-node-id="OnzL7hUj9rc3ECNg22PXWm">黑色保温杯</b><span data-page-node-id="hk37RaIG2KFBEmlChCRdZr">二食堂二楼</span></li>
+      <li data-page-node-id="zaEN5mchT8tukkVPyaJ8NK"><span class="st g" data-page-node-id="4dbWmy8lWR77nhi14tB781"></span><b data-page-node-id="ttKry3HsnxbuMlmIPuCWlS">蓝色长柄伞</b><span data-page-node-id="lDYyUy06m2paDksKD7xI5d">体育馆正门 · 已找到</span></li>
+      <li data-page-node-id="40TnlxGgQRzbEWG3SYOYpY"><span class="st g" data-page-node-id="jbVuCPCnhNRZuxyRQDXBHM"></span><b data-page-node-id="uCCbnqTOalyplY1mvMXgBg">校园卡</b><span data-page-node-id="PQOOKK3u8Lk9F5mV8WrKfz">一食堂一层 · 已找到</span></li>
+      <li data-page-node-id="7tDQQLqF2qh9eEEcAOf1dK"><span class="st o" data-page-node-id="lbEBEy4TdAj6Aj84Cv3nvq"></span><b data-page-node-id="PSzL0QTBa2wLCSa8kPETty">银色学生证</b><span data-page-node-id="Hbx1UQ7IUK1zvQG97VHNAK">图书馆三楼</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ 三步 ============ -->
+<section class="how" id="how" data-page-node-id="stHR7YbFOBNeYxbdaUboiI">
+  <div class="wrap" data-page-node-id="HQ50ufRFPNrwKg9xbncx90">
+    <p class="sec-kicker" data-reveal data-page-node-id="KX9GeMUNpXHIvPWFHMcaPj">HOW IT WORKS</p>
+    <h2 data-reveal style="--d:.08s" data-page-node-id="WolHrBgPHjYiHLAFmjqVMD">三步，<em data-page-node-id="64b5GmZKOT4JhD2XEl90uF">物归原主</em>。</h2>
+
+    <div class="step" data-reveal style="--d:.1s" data-page-node-id="TodFNH1QX8MU8BDs0J2Ixn">
+      <span class="num" aria-hidden="true" data-page-node-id="UCRKrvZFrWFpXwXbt8WLIW">01</span>
+      <div data-page-node-id="ARzTZ0hm5MXRPnlbrdeuYo">
+        <h3 data-page-node-id="EDhlwNTJD5Odi85Izt2GCk">张贴启事<small data-page-node-id="jAoBwIzxZKmzkzAu4yDH3L">ONE MINUTE</small></h3>
+        <p data-page-node-id="M5uZkEhEpcdDnCQ9UMs1p9">拍张照，写下地点和时间，选<b data-page-node-id="WLsU11ACYeLCCDG5K5sQWo">橙色「寻物」</b>或<b data-page-node-id="8Bm7iPvSdaEwzy987IXn6K">绿色「招领」</b>。一张启事一分钟，全校园都看得见。</p>
+      </div>
+    </div>
+    <div class="step" data-reveal style="--d:.16s" data-page-node-id="ZwH8g2yHZ6m8En3B5MZHeb">
+      <span class="num" aria-hidden="true" data-page-node-id="yrXhVzqFtfc3ldOozs8kQX">02</span>
+      <div data-page-node-id="F3HsdR13ZY8SrcC6VNaD8K">
+        <h3 data-page-node-id="lt6Xvgr0B3WjuuqAMwkQcD">智能匹配<small data-page-node-id="KOgZuiCBjvfurBvMOLwnJh">AUTO MATCH</small></h3>
+        <p data-page-node-id="sZ8rRh0B2W8VQpAMTtMLs4">相似启事自动配对。有人捡到了你丢的东西，<b data-page-node-id="D5yTqztHvpf0aiYUHCPX2X">消息立刻送达</b>，不用一遍遍翻公告板。</p>
+      </div>
+    </div>
+    <div class="step" data-reveal style="--d:.22s" data-page-node-id="Y9OJpbshDvkTr0DCiWkYli">
+      <span class="num" aria-hidden="true" data-page-node-id="ePz44FOaKgN2ErGLpuAkJG">03</span>
+      <div data-page-node-id="nkuyJwWAADnKHiG8QV4NNm">
+        <h3 data-page-node-id="pUgrNZJ3GezKgL6mcr1CWL">如约归还<small data-page-node-id="80tmVVHIpqnMM0cpSyJ98n">REUNION</small></h3>
+        <p data-page-node-id="CFWFf3jRy45xeSFBG76EM5">约个地方当面交还，或就近放进失物柜。点下「确认归还」，<b data-page-node-id="dVvA67O136s1DkSk09RUAp">拾光墙亮起一盏灯</b>，故事完结。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 双入口对撞 ============ -->
+<section class="split" id="split" aria-label="两个入口" data-page-node-id="VBqCpYFz4V7oqOxDVgTiBg">
+  <div class="split-grid" data-page-node-id="RRHfCrUZOQEa8wE7bYooBT">
+    <div class="panel orange" data-reveal data-page-node-id="BKHDWGGYDJr8kLoXR69rwl">
+      <span class="plabel" data-page-node-id="PyGWcp0yMaquyC2NDDSG9q">寻物启事</span>
+      <h3 data-page-node-id="yb0sCLQtpyQuwTD7PODdFx">我丢了东西，<br data-page-node-id="J8G97FqC0IJydb62z2IuAv">全校园帮我看。</h3>
+      <ul data-page-node-id="eFmkpqWBQmXFo4jC4xzB6O">
+        <li data-page-node-id="HOU1w0GJncWIZ1FbSEdK3l"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="pcBwFQ7oBkChNQzdq0jknX"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="d9srYVS0IEM0vLLNcbwc9s"/></svg>橙色启事置顶推送，路过的人都会留意</li>
+        <li data-page-node-id="puJ89fAJj2gCEj6H5MiE2v"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="QBSG9a9hUL1C5NGbANLKPH"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="fft5MZSgjrBvBn16x4C8FQ"/></svg>相似物品自动匹配，第一时间收到提醒</li>
+        <li data-page-node-id="I38vXN8PPHtasBPZNn0v8V"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="D5OZGntguEIc3IqcrPPPAd"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="mys7DDpVewK5X61gwZzOEV"/></svg>找到后一键致谢，把温暖留在拾光墙</li>
+      </ul>
+      <a class="btn" href="终稿.html#/publish" data-page-node-id="twuMH1hFN4VnXUI4a3yWRL">
+        贴寻物启事
+        <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="SEYWLT0Z5Bk2tXsacZG9MO"><path d="M5 12h14M13 6l6 6-6 6" data-page-node-id="3di6yKddAWkwwj2N2fPPAI"/></svg>
+      </a>
+    </div>
+    <div class="panel green" data-reveal style="--d:.12s" data-page-node-id="RrlEZazmOcUGGLM8j6oNts">
+      <span class="plabel" data-page-node-id="uE3X2sZsuDm2Dl6mIVFp4J">招领启事</span>
+      <h3 data-page-node-id="CVVCnlVeimecewqbEDfsBh">我捡到了东西，<br data-page-node-id="dpaOUApPpOEhceR0imalfs">等主人来相认。</h3>
+      <ul data-page-node-id="ENwPVXIF91HUh0VbJUcRTP">
+        <li data-page-node-id="6X1kOBRfBXYQnLso6HPs9n"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="q71BVDhEoKcVzjVESRdlnl"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="AX3fwFjSG9IYh1Qv5mqDbz"/></svg>一张照片帮它找到主人，只需一分钟</li>
+        <li data-page-node-id="GSIqdDPm2Rh3cWA3SMWtnc"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="3te9MsY4B2yktHMmUpLpMd"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="KGi1U3UqVEeZjEBLCAzzy3"/></svg>不便保管？就近投进失物柜同样有效</li>
+        <li data-page-node-id="Z31IrhnfFMaTG8v5HbKkHx"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="g4ONQKnxihJgydNKMPEdub"><path d="M4 12.5 9.5 18 20 6.5" data-page-node-id="MdNl6aWRPkeqzOHNrzVEkY"/></svg>归还成功点亮拾光墙，好事有人记得</li>
+      </ul>
+      <a class="btn green" href="终稿.html#/publish" data-page-node-id="cA3ewGJOs9YtltrncdsPK6">
+        贴招领启事
+        <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="BXXFCvnpJEQ9Y5E3v1D0mK"><path d="M5 12h14M13 6l6 6-6 6" data-page-node-id="AZuUhuPgABSMqpYNcvX7fT"/></svg>
+      </a>
+    </div>
+    <span class="vs" aria-hidden="true" data-page-node-id="aGIIXIpjUVy8svyQ1tqpM0">拾</span>
+  </div>
+</section>
+
+<!-- ============ 公告板墙 ============ -->
+<section class="board" id="board" data-page-node-id="1ZKyXRIFZWQnptRFf70Jew">
+  <div class="wrap" data-page-node-id="hCSqqEemOPlFEZAXhTipEV">
+    <div class="board-head" data-page-node-id="TVvC8NKCYWLn7esO9CJxGU">
+      <div data-page-node-id="GgpqrhvvgPeRztUu9r1P6y">
+        <p class="sec-kicker" data-reveal data-page-node-id="e2WvV3cmcbIBmR1OMd1Gl3">BULLETIN BOARD</p>
+        <h2 data-reveal style="--d:.08s" data-page-node-id="9fm1C2O4dldJc4rF1B5iZi">本周，它们正在<em data-page-node-id="s7jcdINdUIvLCa4GzLQDt5">被寻找</em>。</h2>
+      </div>
+      <p class="board-date" data-reveal style="--d:.14s" data-page-node-id="2lEA904PXmdXA7tlPmkAOD">更新于 <time id="today" data-page-node-id="mV7eeXLWgJLhjbbnbr0avg">9月11日 星期五</time> · 预览快照数据</p>
+    </div>
+
+    <div class="wall" data-page-node-id="WPwWBVClHawBK9WcNyXuyR">
+      <article class="wcard" data-reveal style="--d:.05s" data-page-node-id="ZDohAaHiSJmO6u7S87nqLU">
+        <span class="tape" aria-hidden="true" data-page-node-id="W6kFvw5AbjjssEHd7LTjzC"></span>
+        <div class="wtop" data-page-node-id="aGkLkMepZJEop52Gpbi8VM"><span class="chip orange" data-page-node-id="7Wk8g3YXIxwcftupme6mJu">寻物</span><span class="tno" data-page-node-id="5BURcuRvySqjTpCwcVuHdl">NO.2026-0911-0042</span></div>
+        <h3 data-page-node-id="74ohVhVKba8hjPVKQXTCMA">银色学生证</h3>
+        <p class="wmeta" data-page-node-id="JHATxNpOwByiBMtaNgP6VS"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="qllbMfgXmfkoDku7S0gEan"><path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z" data-page-node-id="MxcmSGiwAFGOA6gPXEOxQk"/><circle cx="12" cy="10.5" r="2.4" data-page-node-id="yf0FV7zQgqAbP2s04ShXVs"/></svg>图书馆三楼自习区 · 9月9日</p>
+        <div class="wfoot" data-page-node-id="XTQ1r50m0dTV1lomxukZDs"><span class="tno" data-page-node-id="NT1Ubn3MfLqVuNuAxpHkEG">16:20 发布</span><span class="wback" data-page-node-id="alTCtrwjXKoQ7EwQi4sgnG">必有谢礼</span></div>
+        <span class="stamp mini orange" data-page-node-id="RvRtcS6yRokKA7Cs52HvGs"><span data-page-node-id="7C7DStSKsQrr3wuC38NAlZ"><b data-page-node-id="038uqZvGtIJbtquGzKlyFh">寻找中</b></span></span>
+      </article>
+
+      <article class="wcard" data-reveal style="--d:.11s" data-page-node-id="qlUVrkrG7TVyqx2Y8G5eGe">
+        <span class="tape green" aria-hidden="true" data-page-node-id="J82G1D4hrsBU2V8qgWh9RK"></span>
+        <div class="wtop" data-page-node-id="An4LJrdLCV0qxoSC74mJI5"><span class="chip green" data-page-node-id="SyN3Zrg2PCoz7GIutXiVhG">招领</span><span class="tno" data-page-node-id="14r7DjbQzp8xM5NpZVxtyO">NO.2026-0910-0133</span></div>
+        <h3 data-page-node-id="cvo8FT6hgGd1qErpfFTfJK">黑色保温杯</h3>
+        <p class="wmeta" data-page-node-id="JRPZY8AE6B9WtDOMG44fua"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="QVKPEU1rRYpJRb9Z2kMv8O"><path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z" data-page-node-id="eRVNecVP38vEQaO0IQisyU"/><circle cx="12" cy="10.5" r="2.4" data-page-node-id="EjATHVrGbDr4d3wFcRxCvN"/></svg>二食堂二楼 · 9月10日</p>
+        <div class="wfoot" data-page-node-id="BVqwK4SdyWib9rzJrPIKTo"><span class="tno" data-page-node-id="X6Vu7AyOmoH2Ac4nYabBxj">12:05 发布</span><span class="wback" data-page-node-id="gNztfFPQrZjVbyiZmLsG7Z">等主人来</span></div>
+        <span class="stamp mini green" data-page-node-id="7ZcHCgRJRj9VEGjkmoBXww"><span data-page-node-id="SFGRMeBNNtT30oBrVz43Qf"><b data-page-node-id="i4uSHKYH3LH8VxnTrhjQMM">已找到</b></span></span>
+      </article>
+
+      <article class="wcard" data-reveal style="--d:.17s" data-page-node-id="iUrH3IwBaPRuafslyeHqzh">
+        <span class="tape" aria-hidden="true" data-page-node-id="0KhqRQnR6V74LHn18YqGPi"></span>
+        <div class="wtop" data-page-node-id="93OOXDZA2jDJBqNwelIs9L"><span class="chip orange" data-page-node-id="YR27IVCfhAFbivK1RiogQ3">寻物</span><span class="tno" data-page-node-id="1E7qNlzpuzquYiw3HNatZZ">NO.2026-0910-0178</span></div>
+        <h3 data-page-node-id="mjWFz6NU59kdhxCOYrforv">AirPods Pro</h3>
+        <p class="wmeta" data-page-node-id="27OCGj6FNEsRgf3uSRxoqc"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="IQBu3CRTQelgrpNKmIvnAa"><path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z" data-page-node-id="39PTIDSbtLPDQ0o4Sktd1v"/><circle cx="12" cy="10.5" r="2.4" data-page-node-id="cHBUKlfLgQg0AIv3c3bPqj"/></svg>三教 402 · 9月10日</p>
+        <div class="wfoot" data-page-node-id="FhAmqcl8eLmRxY5DVeAsWh"><span class="tno" data-page-node-id="DGJlTltSbOxv0ayLfcn4xS">18:40 发布</span><span class="wback" data-page-node-id="G3tA7w64QhyAiXHWBPvn5T">谢一杯奶茶</span></div>
+        <span class="stamp mini orange" data-page-node-id="E66JNOWemJ5N1F2Swz95gZ"><span data-page-node-id="RGNjA3a1hVgd3X31MbtePE"><b data-page-node-id="fRxN8x3qykzIcXONEFdjPD">寻找中</b></span></span>
+      </article>
+
+      <article class="wcard" data-reveal style="--d:.23s" data-page-node-id="39rI7FAlXYqdqoxx4s4Ep0">
+        <span class="tape green" aria-hidden="true" data-page-node-id="VbmOjXL8fCreaM3VeUWUVF"></span>
+        <div class="wtop" data-page-node-id="vQaOh8Zb55O32bZRqW7YM7"><span class="chip green" data-page-node-id="wys2a1c5KnAc7nk9p5EVGH">招领</span><span class="tno" data-page-node-id="xrgVoXNwiYRIVYfF2GKfSi">NO.2026-0908-0057</span></div>
+        <h3 data-page-node-id="WkokaYO7P6cVZENlXy9LoI">灰色英短「团团」</h3>
+        <p class="wmeta" data-page-node-id="bvGb9LSqklNzSJBrWvO3BO"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="duckllR8vV361u100RH2Z8"><path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z" data-page-node-id="Kjb57GOidPLctrRFSIqnHB"/><circle cx="12" cy="10.5" r="2.4" data-page-node-id="nioNHdwdFHzCpTerR28ISa"/></svg>东十二宿舍楼下 · 9月8日</p>
+        <div class="wfoot" data-page-node-id="Z9U5AnoCkqlwIA9mbyaKrD"><span class="tno" data-page-node-id="aIdza5A8wSlPrJ5rVq7Ymd">21:15 发布</span><span class="wback" data-page-node-id="EqZFUJNlXzK2wJ2j6Q0cyz">4 小时回家</span></div>
+        <span class="stamp mini green" data-page-node-id="5HbmI2lGirr5bZWkzsEcFC"><span data-page-node-id="8lzBjbmClCD7kPyS7h3BDM"><b data-page-node-id="PzGCzi446o4tAyNFC9La33">已找到</b></span></span>
+      </article>
+
+      <article class="wcard" data-reveal style="--d:.29s" data-page-node-id="peWgn487HlDjOaYZXCugKr">
+        <span class="tape" aria-hidden="true" data-page-node-id="7zVeG2Pj2o0kjM3VwFGVjJ"></span>
+        <div class="wtop" data-page-node-id="4qGE5kOXL75y0B9WtHyxPC"><span class="chip orange" data-page-node-id="tCYSnwHWiTAX40dLy0Zn7O">寻物</span><span class="tno" data-page-node-id="YonF2SlxM6ks8CHFDkmxw6">NO.2026-0907-0021</span></div>
+        <h3 data-page-node-id="NWj7agOLqvfi0oxQkutiH9">高等数学（上）</h3>
+        <p class="wmeta" data-page-node-id="aU2h20glL4N92tlGkAhVtl"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="D97JwCF8rAKMEkkQt8mB36"><path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z" data-page-node-id="ZEz6vuxhHrRmshmFF7xJKl"/><circle cx="12" cy="10.5" r="2.4" data-page-node-id="FMYMti3EgEfNDPfNvN6irC"/></svg>图书馆四楼北侧 · 9月7日</p>
+        <div class="wfoot" data-page-node-id="J2X4whtCCbLbLQegYVTVuq"><span class="tno" data-page-node-id="qCnTiYs7pOUJTNW2BNqEvg">10:30 发布</span><span class="wback" data-page-node-id="taMiUDxVo2whyyHxvNT4AE">笔记全在里面</span></div>
+        <span class="stamp mini orange" data-page-node-id="GoTFkzn7BkdZwxHFmU7QxI"><span data-page-node-id="1HGyYYwwiTlX1GyPShcdQR"><b data-page-node-id="sYHdOq3XHpqZkW5zm7OIS5">寻找中</b></span></span>
+      </article>
+
+      <article class="wcard" data-reveal style="--d:.35s" data-page-node-id="xTEU0F1BtZY4FZJPOIgdXG">
+        <span class="tape green" aria-hidden="true" data-page-node-id="erLC1RjBjr4BEhYnRjWzcG"></span>
+        <div class="wtop" data-page-node-id="F2mBl7mNHPjKCoqwxFcuRr"><span class="chip green" data-page-node-id="7t4mvFBunsWzGDhC7HS9FC">招领</span><span class="tno" data-page-node-id="n7JPfZQqbcjFyjQ5WCD9Gf">NO.2026-0911-0006</span></div>
+        <h3 data-page-node-id="fKRlE57KIhy4aDn2X2G4uC">一串钥匙</h3>
+        <p class="wmeta" data-page-node-id="9hEvAm8K7u1rFlnsBq14FE"><svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="067OYU8rCCbFf9qLDY1IYy"><path d="M12 21s-6.5-5.2-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.8 12 21 12 21z" data-page-node-id="WbLAEnqlmBQiMTBdA7Ifni"/><circle cx="12" cy="10.5" r="2.4" data-page-node-id="p93F20AoEiapWZIBo4bep9"/></svg>体育馆正门 · 9月11日</p>
+        <div class="wfoot" data-page-node-id="pz9CPX5Rg87hwHrPFrEAbK"><span class="tno" data-page-node-id="CQ4Ez81rkARyEb1hBDcBdZ">08:02 发布</span><span class="wback" data-page-node-id="P0PVusXbfHhuwhIIGOjADy">含自行车钥匙</span></div>
+        <span class="stamp mini green" data-page-node-id="oirfUdaFBpTzj5PfpA519E"><span data-page-node-id="zYDf92T6qnmIFRJGgY0y1O"><b data-page-node-id="bKJYIX5dnNSveKJDdw4HSK">已找到</b></span></span>
+      </article>
+    </div>
+
+    <div class="board-more" data-reveal data-page-node-id="WC6zcyQDGL4FE8zm2ll9Cw">
+      <a class="btn ghost" href="终稿.html#/" data-page-node-id="bSaDdlDCM9R2g06yH5iupe">
+        去公告板看全部启事
+        <svg viewBox="0 0 24 24" aria-hidden="true" data-page-node-id="djgj0P9gfzMgT9p2g33SZR"><path d="M5 12h14M13 6l6 6-6 6" data-page-node-id="U7jLBkEMqoFbnL1ycbKGHP"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 归还故事 ============ -->
+<section class="stories" id="story" data-page-node-id="1ClLMiT8BP3aFesFAdBYHk">
+  <div class="wrap" data-page-node-id="OfyY3Ehwxan0D1DR7YZJE4">
+    <p class="sec-kicker" data-reveal data-page-node-id="it7OfjOlk5GJ7JyQrYpsDc">REUNION STORIES</p>
+    <h2 data-reveal style="--d:.08s" data-page-node-id="JMyp58JpEuIe2yDGn8Bfww">拾光墙上，<em class="g" data-page-node-id="4FZzepGHcXiFMjq8Cf5U2U">最近亮起的灯</em>。</h2>
+
+    <figure class="quote" data-reveal style="--d:.1s" data-page-node-id="EbCExDFhbRTjT8DMQWh9Tp">
+      <blockquote data-page-node-id="db8YkZcGYXBGFTUiAXiqup">发布之后我睡了午觉，醒来发现校园卡已经躺在楼下失物柜里了。像魔法。</blockquote>
+      <figcaption data-page-node-id="DVVgsMBwUgEcx3RGzkcvRp"><b data-page-node-id="gfEEKoFxGVi8NnECPUG0ic">王同学 · 大二</b> —— 丢失：校园卡 · 用时 4 小时</figcaption>
+    </figure>
+    <figure class="quote" data-reveal style="--d:.16s" data-page-node-id="WOLEZS0IVntapO65se7Yll">
+      <blockquote data-page-node-id="xRVWYzTezU2leL6XMcSAok">我只是随手捡了把伞，结果认识了隔壁班的她。这大概就是拾光吧。</blockquote>
+      <figcaption data-page-node-id="7eDHm5XnlU6djqyR4ZVeqs"><b data-page-node-id="DxvIlKJNlGH1AZcIBiqLdS">陈同学 · 大三</b> —— 拾获：蓝色长柄伞</figcaption>
+    </figure>
+    <figure class="quote" data-reveal style="--d:.22s" data-page-node-id="mkmA1FPEpwU0OGBSpKhom3">
+      <blockquote data-page-node-id="VwNyYyVD23BSPsQrjP9ur1">团团回来了。橘色的，胖了两斤。</blockquote>
+      <figcaption data-page-node-id="kibPutBg0G3AYOdEp5S5TK"><b data-page-node-id="Julil0ZGm7dAXIzCClhWrn">李同学 · 大一</b> —— 寻回：英短「团团」· 用时 26 小时</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 终章 CTA ============ -->
+<section class="finale" data-page-node-id="vmByFpbMEzex4Sd6en8YjN">
+  <div class="hero-bg" aria-hidden="true" data-page-node-id="HYNFvBPoamPn21Kp5JJvfX">归</div>
+  <div class="wrap" data-page-node-id="xlnWkft6gIGnTG1gVm3usB">
+    <p class="sec-kicker" data-reveal data-page-node-id="S3QexkRA1w8NOztixnW3tB">START NOW</p>
+    <h2 data-reveal style="--d:.08s" data-page-node-id="BuicPrUBd4GhOQYb8ayFyB">下一个回家的，<br data-page-node-id="4xnep2BYCvx23RPHQXdAa1">是<em data-page-node-id="z6ILEy0tRm4dMnXRpt9GjH">谁的宝贝</em>？</h2>
+    <p class="sec-sub" data-reveal style="--d:.16s" data-page-node-id="CSBdNxLDer6vjSacVIMF5M">贴一张启事，只需要一分钟。剩下的，交给整个校园的温度。</p>
+    <div class="finale-cta" data-reveal style="--d:.24s" data-page-node-id="bbNca1mOEcTY5dWSUURSas">
+      <a class="btn" href="终稿.html#/publish" data-page-node-id="uiJsmMUk6mK8tAacc2U8D8">我丢了东西</a>
+      <a class="btn green" href="终稿.html#/publish" data-page-node-id="zkwCjTh4BlufztXipH5Tjb">我捡到了东西</a>
+    </div>
+    <a class="link-preview" data-reveal style="--d:.3s" href="终稿.html" data-page-node-id="brW1JYpSMRsdID964IFUFM">或直接进入拾光应用 →</a>
+  </div>
+</section>
+
+<!-- ============ 页脚 ============ -->
+<footer data-page-node-id="tlPHHpJ8jMSjLW7sYJF6vK">
+  <div class="wrap" data-page-node-id="MqCM1D2PeHonlmeEEUJ12n">
+    <span class="flogo" data-page-node-id="wfmvfyWVodtjOlmZ2JqiSC">拾光 · 校园失物招领</span>
+    <nav aria-label="页脚导航" data-page-node-id="rnO2axFiFnvDXeUF7ltcHi">
+      <a href="#how" data-page-node-id="scB2SYLp8ZHQYYKwClTnSd">怎么用</a>
+      <a href="#board" data-page-node-id="hqr1ESO5KPHH8QtyydCnGH">公告板</a>
+      <a href="使用说明.md" data-page-node-id="8C11jaT3dlB9Dg0ahQuFtU">使用说明</a>
+      <a href="终稿.html" data-page-node-id="XiFtQ2HBbCjk1VKBdwbwsy">应用</a>
+    </nav>
+    <span class="tech" data-page-node-id="l4DIKZMLW6lO8MHq6gUlIC">原生 JS · Node.js 零依赖后端 · JWT 鉴权 · JSON 存储 — © 2026 拾光</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 今天日期 */
+  try{
+    document.getElementById('today').textContent =
+      new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(new Date());
+  }catch(e){}
+
+  /* 滚动显现 */
+  var items = document.querySelectorAll('[data-reveal]');
+  if(!reduce && 'IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+      });
+    },{threshold:.18,rootMargin:'0px 0px -6% 0px'});
+    items.forEach(function(el){ io.observe(el); });
+  }else{
+    items.forEach(function(el){ el.classList.add('in'); });
+  }
+
+  /* 「找你」手绘圈：页面稳定后画出 */
+  window.addEventListener('load',function(){
+    setTimeout(function(){ document.getElementById('hlWord').classList.add('drawn'); },150);
+  });
+
+  /* 英雄区海报：跟随鼠标的轻微视差（仅桌面、未开启减动效时） */
+  var a = document.getElementById('posterA'), b = document.getElementById('posterB');
+  if(!reduce && a && b && window.matchMedia('(pointer:fine)').matches){
+    var raf = null;
+    var hero = document.querySelector('.hero');
+    hero.addEventListener('mousemove',function(e){
+      if(raf) return;
+      raf = requestAnimationFrame(function(){
+        var r = hero.getBoundingClientRect();
+        var dx = (e.clientX - r.left)/r.width - .5;
+        var dy = (e.clientY - r.top)/r.height - .5;
+        a.style.translate = (dx*10)+'px '+(dy*8)+'px';
+        b.style.translate = (dx*-14)+'px '+(dy*-10)+'px';
+        raf = null;
+      });
+    });
+    hero.addEventListener('mouseleave',function(){
+      a.style.translate = '0px 0px';
+      b.style.translate = '0px 0px';
+    });
+  }
+})();
+</script>
+</body>
+</html>
